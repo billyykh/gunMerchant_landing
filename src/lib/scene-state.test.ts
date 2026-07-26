@@ -1,13 +1,31 @@
 import { describe, expect, it } from "vitest";
 import {
-  ACT_RANGES,
+  GEAR_NAMES,
   PART_NAMES,
+  SCROLL_WINDOWS,
+  type SceneState,
+  type Vec3,
   deriveSceneState,
   deriveStaticSceneState,
 } from "./scene-state";
 
+/** A scrub of the whole page, fine enough to catch a discontinuity. */
+const SCROLL_SAMPLES = Array.from({ length: 101 }, (_, step) => step / 100);
+
 const midpoint = (range: { start: number; end: number }) =>
   (range.start + range.end) / 2;
+
+const at = (range: { start: number; end: number }, t: number) =>
+  range.start + (range.end - range.start) * t;
+
+const length = ([x, y, z]: Vec3) => Math.hypot(x, y, z);
+
+const distanceBetween = (a: Vec3, b: Vec3) =>
+  length([a[0] - b[0], a[1] - b[1], a[2] - b[2]]);
+
+/** How far the camera sits from whatever it is pointed at. */
+const framingDistance = ({ camera }: SceneState) =>
+  distanceBetween(camera.position, camera.target);
 
 describe("act derivation", () => {
   it("is in the Hero Act at the top of the page", () => {
@@ -15,11 +33,11 @@ describe("act derivation", () => {
   });
 
   it("is in the Gunsmith Act once Assembly completes", () => {
-    expect(deriveSceneState(ACT_RANGES.assembly.end).act).toBe("gunsmith");
+    expect(deriveSceneState(SCROLL_WINDOWS.assembly.end).act).toBe("gunsmith");
   });
 
   it("is in the Lineup Act once the drop completes", () => {
-    expect(deriveSceneState(ACT_RANGES.drop.end).act).toBe("lineup");
+    expect(deriveSceneState(SCROLL_WINDOWS.drop.end).act).toBe("lineup");
   });
 
   it("is still in the Lineup Act at the bottom of the page", () => {
@@ -28,6 +46,12 @@ describe("act derivation", () => {
 });
 
 describe("Assembly", () => {
+  const explodedSpread = (progress: number) =>
+    PART_NAMES.reduce(
+      (total, name) => total + length(deriveSceneState(progress).parts[name].position),
+      0
+    );
+
   it("reports every contract Part", () => {
     const { parts } = deriveSceneState(0);
     expect(Object.keys(parts).sort()).toEqual([...PART_NAMES].sort());
@@ -35,95 +59,160 @@ describe("Assembly", () => {
 
   it("holds the Parts Exploded through Act 1", () => {
     expect(deriveSceneState(0).assemblyProgress).toBe(0);
-    expect(deriveSceneState(ACT_RANGES.assembly.start).assemblyProgress).toBe(0);
+    expect(deriveSceneState(SCROLL_WINDOWS.assembly.start).assemblyProgress).toBe(0);
   });
 
-  it("completes Assembly exactly at the end of the Assembly range", () => {
-    expect(deriveSceneState(ACT_RANGES.assembly.end).assemblyProgress).toBe(1);
+  it("completes Assembly exactly at the end of the Assembly window", () => {
+    expect(deriveSceneState(SCROLL_WINDOWS.assembly.end).assemblyProgress).toBe(1);
   });
 
   it("stays assembled for the rest of the page", () => {
     expect(deriveSceneState(1).assemblyProgress).toBe(1);
   });
 
-  it("is partway through Assembly at the midpoint", () => {
-    const progress = deriveSceneState(
-      midpoint(ACT_RANGES.assembly)
-    ).assemblyProgress;
-    expect(progress).toBeGreaterThan(0);
-    expect(progress).toBeLessThan(1);
+  it("tracks scroll linearly — GSAP's scrub supplies the easing, not the seam", () => {
+    // MASTER.md §6.1: easing lives in `scrub: 1`. Easing here as well would
+    // compound into a sluggish Assembly.
+    for (const t of [0.25, 0.5, 0.75]) {
+      expect(
+        deriveSceneState(at(SCROLL_WINDOWS.assembly, t)).assemblyProgress
+      ).toBeCloseTo(t, 10);
+    }
   });
 
   it("puts every Part at its assembled pose once Assembly completes", () => {
-    const { parts } = deriveSceneState(ACT_RANGES.assembly.end);
+    const { parts } = deriveSceneState(SCROLL_WINDOWS.assembly.end);
     for (const name of PART_NAMES) {
       expect(parts[name].position).toEqual([0, 0, 0]);
+      expect(parts[name].rotation).toEqual([0, 0, 0]);
     }
   });
 
   it("offsets every Part away from the assembled pose while Exploded", () => {
     const { parts } = deriveSceneState(0);
     for (const name of PART_NAMES) {
-      const [x, y, z] = parts[name].position;
-      expect(Math.hypot(x, y, z)).toBeGreaterThan(0);
+      expect(length(parts[name].position)).toBeGreaterThan(0);
     }
   });
 
   it("moves Parts monotonically toward the assembled pose", () => {
-    const distanceAt = (progress: number) =>
-      PART_NAMES.reduce((total, name) => {
-        const [x, y, z] = deriveSceneState(progress).parts[name].position;
-        return total + Math.hypot(x, y, z);
-      }, 0);
-
-    const exploded = distanceAt(ACT_RANGES.assembly.start);
-    const halfway = distanceAt(midpoint(ACT_RANGES.assembly));
-    const assembled = distanceAt(ACT_RANGES.assembly.end);
+    const exploded = explodedSpread(SCROLL_WINDOWS.assembly.start);
+    const halfway = explodedSpread(midpoint(SCROLL_WINDOWS.assembly));
+    const assembled = explodedSpread(SCROLL_WINDOWS.assembly.end);
 
     expect(halfway).toBeLessThan(exploded);
     expect(assembled).toBeLessThan(halfway);
   });
 });
 
-describe("camera", () => {
-  const distanceToSubject = (progress: number) => {
-    const { camera } = deriveSceneState(progress);
-    return Math.hypot(
-      camera.position[0] - camera.target[0],
-      camera.position[1] - camera.target[1],
-      camera.position[2] - camera.target[2]
-    );
-  };
+describe("the drop", () => {
+  it("holds the Hero Rifle at the Gunsmith View's rest pose until the drop begins", () => {
+    expect(deriveSceneState(SCROLL_WINDOWS.gunsmithHold.end).dropProgress).toBe(0);
+    expect(deriveSceneState(SCROLL_WINDOWS.gunsmithHold.end).heroRifle.position).toEqual([
+      0, 0, 0,
+    ]);
+  });
 
+  it("lands the Hero Rifle exactly at the end of the drop window", () => {
+    expect(deriveSceneState(SCROLL_WINDOWS.drop.end).dropProgress).toBe(1);
+  });
+
+  it("leaves the Hero Rifle landed for the rest of the page", () => {
+    expect(deriveSceneState(1).dropProgress).toBe(1);
+  });
+
+  it("brings the Hero Rifle down into the Lineup", () => {
+    const resting = deriveSceneState(midpoint(SCROLL_WINDOWS.gunsmithHold));
+    const landed = deriveSceneState(1);
+
+    expect(landed.heroRifle.position[1]).toBeLessThan(
+      resting.heroRifle.position[1]
+    );
+  });
+
+  it("never lifts the Hero Rifle back up — the fall only ever runs one way", () => {
+    // This is what makes scrubbing back up retrace the fall rather than
+    // bounce: height is monotonic in scroll progress across the whole page.
+    let previousHeight = deriveSceneState(0).heroRifle.position[1];
+
+    for (const progress of SCROLL_SAMPLES) {
+      const height = deriveSceneState(progress).heroRifle.position[1];
+      expect(height).toBeLessThanOrEqual(previousHeight);
+      previousHeight = height;
+    }
+  });
+
+  it("tracks scroll linearly through the fall", () => {
+    for (const t of [0.25, 0.5, 0.75]) {
+      expect(deriveSceneState(at(SCROLL_WINDOWS.drop, t)).dropProgress).toBeCloseTo(
+        t,
+        10
+      );
+    }
+  });
+});
+
+describe("the Lineup", () => {
+  it("reports every contract Gear Item", () => {
+    expect(Object.keys(deriveSceneState(1).gear).sort()).toEqual(
+      [...GEAR_NAMES].sort()
+    );
+  });
+
+  it("gives every Gear Item its own place — nothing is stacked on anything else", () => {
+    const { gear, heroRifle } = deriveSceneState(1);
+    const placed = [heroRifle.position, ...GEAR_NAMES.map((n) => gear[n].position)];
+
+    for (let i = 0; i < placed.length; i++) {
+      for (let j = i + 1; j < placed.length; j++) {
+        expect(distanceBetween(placed[i], placed[j])).toBeGreaterThan(0.5);
+      }
+    }
+  });
+
+  it("frames the arrangement it actually built", () => {
+    // The Act 3 camera and the Lineup layout are derived separately; this
+    // catches them drifting apart.
+    const { gear, heroRifle, camera } = deriveSceneState(1);
+    const placed = [heroRifle.position, ...GEAR_NAMES.map((n) => gear[n].position)];
+
+    for (const axis of [0, 1, 2] as const) {
+      const values = placed.map((position) => position[axis]);
+      expect(camera.target[axis]).toBeGreaterThanOrEqual(Math.min(...values));
+      expect(camera.target[axis]).toBeLessThanOrEqual(Math.max(...values));
+    }
+  });
+
+  it("keeps the arrangement fixed — Gear Items are staged, not animated by scroll", () => {
+    expect(deriveSceneState(0).gear).toEqual(deriveSceneState(1).gear);
+  });
+});
+
+describe("camera", () => {
   it("closes in on the Hero Rifle as Assembly completes", () => {
-    expect(distanceToSubject(ACT_RANGES.assembly.end)).toBeLessThan(
-      distanceToSubject(0)
+    expect(framingDistance(deriveSceneState(SCROLL_WINDOWS.assembly.end))).toBeLessThan(
+      framingDistance(deriveSceneState(0))
     );
   });
 
   it("pulls back out to frame the whole Lineup", () => {
-    expect(distanceToSubject(1)).toBeGreaterThan(
-      distanceToSubject(midpoint(ACT_RANGES.gunsmith))
+    expect(framingDistance(deriveSceneState(1))).toBeGreaterThan(
+      framingDistance(deriveSceneState(midpoint(SCROLL_WINDOWS.gunsmithHold)))
     );
   });
 
   it("follows the Hero Rifle down during the drop", () => {
-    const gunsmith = deriveSceneState(midpoint(ACT_RANGES.gunsmith));
-    const lineup = deriveSceneState(ACT_RANGES.drop.end);
+    const gunsmith = deriveSceneState(midpoint(SCROLL_WINDOWS.gunsmithHold));
+    const lineup = deriveSceneState(SCROLL_WINDOWS.drop.end);
     expect(lineup.camera.target[1]).toBeLessThan(gunsmith.camera.target[1]);
   });
 
   it("never jumps — a small scroll delta never moves the camera far", () => {
     let previous = deriveSceneState(0).camera.position;
 
-    for (let step = 1; step <= 100; step++) {
-      const current = deriveSceneState(step / 100).camera.position;
-      const delta = Math.hypot(
-        current[0] - previous[0],
-        current[1] - previous[1],
-        current[2] - previous[2]
-      );
-      expect(delta).toBeLessThan(0.5);
+    for (const progress of SCROLL_SAMPLES) {
+      const current = deriveSceneState(progress).camera.position;
+      expect(distanceBetween(current, previous)).toBeLessThan(0.5);
       previous = current;
     }
   });
@@ -139,19 +228,18 @@ describe("interaction availability", () => {
 
   it("offers nothing mid-Assembly — the Hero Rifle is still moving", () => {
     expect(
-      deriveSceneState(midpoint(ACT_RANGES.assembly)).interaction.parts
+      deriveSceneState(midpoint(SCROLL_WINDOWS.assembly)).interaction.parts
     ).toBe(false);
   });
 
   it("makes Parts inspectable once the Gunsmith View settles", () => {
-    expect(deriveSceneState(midpoint(ACT_RANGES.gunsmith)).interaction).toEqual({
-      parts: true,
-      gear: false,
-    });
+    expect(
+      deriveSceneState(midpoint(SCROLL_WINDOWS.gunsmithHold)).interaction
+    ).toEqual({ parts: true, gear: false });
   });
 
   it("withdraws Part interaction once the drop begins", () => {
-    expect(deriveSceneState(midpoint(ACT_RANGES.drop)).interaction).toEqual({
+    expect(deriveSceneState(midpoint(SCROLL_WINDOWS.drop)).interaction).toEqual({
       parts: false,
       gear: false,
     });
@@ -166,30 +254,37 @@ describe("interaction availability", () => {
 });
 
 describe("scroll reversal", () => {
-  // Scrubbing back up must retrace the same states, so the seam has to be a
-  // pure function of progress with no hysteresis anywhere in it.
-  it("returns identical state whether progress is rising or falling", () => {
-    const samples = Array.from({ length: 101 }, (_, step) => step / 100);
+  it("answers for a scroll position the same way however the visitor got there", () => {
+    // Scrubbing back up must retrace the states scrubbing down produced. That
+    // holds only while the seam keeps no memory of where the visitor has
+    // been — this fails the moment anyone adds a cache, a smoothed value, or
+    // a "last progress" module variable.
+    const probes = [0.05, midpoint(SCROLL_WINDOWS.assembly), 0.5, 0.7, 0.95];
+    const before = probes.map(deriveSceneState);
 
-    const ascending = samples.map(deriveSceneState);
-    const descending = [...samples].reverse().map(deriveSceneState).reverse();
+    for (const progress of SCROLL_SAMPLES) deriveSceneState(progress);
+    for (const progress of [...SCROLL_SAMPLES].reverse()) deriveSceneState(progress);
 
-    expect(descending).toEqual(ascending);
+    expect(probes.map(deriveSceneState)).toEqual(before);
   });
 });
 
 describe("reduced motion", () => {
-  // Not a degraded path: each Act is a deliberately composed still, and every
-  // interaction the animated page offers is still offered here.
+  // MASTER.md §6.3. Each Act is a deliberately composed still, asserted on its
+  // own terms — comparing it to the animated path at some progress value would
+  // just re-describe "whatever the interpolation returns", which the ticket
+  // rules out.
+
+  const ACTS = ["hero", "gunsmith", "lineup"] as const;
 
   it("reports the Act it was asked for", () => {
-    expect(deriveStaticSceneState("hero").act).toBe("hero");
-    expect(deriveStaticSceneState("gunsmith").act).toBe("gunsmith");
-    expect(deriveStaticSceneState("lineup").act).toBe("lineup");
+    for (const act of ACTS) {
+      expect(deriveStaticSceneState(act).act).toBe(act);
+    }
   });
 
   it("shows the Hero Rifle assembled in every Act — never a frozen Exploded pile", () => {
-    for (const act of ["hero", "gunsmith", "lineup"] as const) {
+    for (const act of ACTS) {
       const state = deriveStaticSceneState(act);
       expect(state.assemblyProgress).toBe(1);
       for (const name of PART_NAMES) {
@@ -199,30 +294,53 @@ describe("reduced motion", () => {
     }
   });
 
-  it("rests on the same composed camera the animated path settles into", () => {
-    expect(deriveStaticSceneState("hero").camera).toEqual(
-      deriveSceneState(ACT_RANGES.hero.start).camera
-    );
-    expect(deriveStaticSceneState("gunsmith").camera).toEqual(
-      deriveSceneState(midpoint(ACT_RANGES.gunsmith)).camera
-    );
-    expect(deriveStaticSceneState("lineup").camera).toEqual(
-      deriveSceneState(1).camera
-    );
+  it("points its camera at the subject in every Act", () => {
+    for (const act of ACTS) {
+      expect(framingDistance(deriveStaticSceneState(act))).toBeGreaterThan(0);
+    }
   });
 
   it("frames each Act differently — one still per Act, not one still reused", () => {
-    const hero = deriveStaticSceneState("hero").camera.position;
-    const gunsmith = deriveStaticSceneState("gunsmith").camera.position;
-    const lineup = deriveStaticSceneState("lineup").camera.position;
+    const framings = ACTS.map((act) => deriveStaticSceneState(act).camera);
 
-    expect(gunsmith).not.toEqual(hero);
-    expect(lineup).not.toEqual(gunsmith);
+    for (let i = 0; i < framings.length; i++) {
+      for (let j = i + 1; j < framings.length; j++) {
+        expect(framings[i]).not.toEqual(framings[j]);
+      }
+    }
+  });
+
+  it("composes Act 1 for a single assembled rifle, not for a field of Parts", () => {
+    // The animated Act 1 camera is pulled back to hold the Exploded Parts
+    // spread behind the brand lockup. With nothing Exploded to hold, that
+    // framing strands the rifle in the middle of an empty frame.
+    expect(framingDistance(deriveStaticSceneState("hero"))).toBeLessThan(
+      framingDistance(deriveSceneState(0))
+    );
+  });
+
+  it("stages the Hero Rifle where its Act expects it", () => {
+    expect(deriveStaticSceneState("hero").dropProgress).toBe(0);
+    expect(deriveStaticSceneState("gunsmith").dropProgress).toBe(0);
+    expect(deriveStaticSceneState("lineup").dropProgress).toBe(1);
+  });
+
+  it("arranges the Lineup, not just the Hero Rifle", () => {
+    const { gear, heroRifle } = deriveStaticSceneState("lineup");
+    expect(Object.keys(gear).sort()).toEqual([...GEAR_NAMES].sort());
+
+    for (const name of GEAR_NAMES) {
+      expect(distanceBetween(gear[name].position, heroRifle.position)).toBeGreaterThan(
+        0.5
+      );
+    }
   });
 
   it("keeps every interaction the animated path offers", () => {
+    // Reduced motion removes animation, never functionality — so this one is
+    // deliberately asserted against the animated path.
     expect(deriveStaticSceneState("gunsmith").interaction).toEqual(
-      deriveSceneState(midpoint(ACT_RANGES.gunsmith)).interaction
+      deriveSceneState(midpoint(SCROLL_WINDOWS.gunsmithHold)).interaction
     );
     expect(deriveStaticSceneState("lineup").interaction).toEqual(
       deriveSceneState(1).interaction

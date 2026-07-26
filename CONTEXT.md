@@ -26,6 +26,10 @@ _Avoid_: build animation, morph
 **Gunsmith View**:
 Act 2's interactive inspection of the assembled Hero Rifle, styled after Call of Duty's Gunsmith screen.
 
+**Drop**:
+The scroll-driven transition of the assembled Hero Rifle from the Gunsmith View down into the Lineup.
+_Avoid_: fall, transition, Act 3 intro
+
 **Callout**:
 The HUD leader-line and label that appears when a Part or Gear Item is hovered.
 _Avoid_: tooltip, annotation
