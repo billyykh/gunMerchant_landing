@@ -105,6 +105,21 @@ describe("Assembly", () => {
     }
   });
 
+  it("keeps every Part on the rifle's centreline at every point in Assembly", () => {
+    // Z is the rifle's 0.113 of thickness, and the camera passes straight down
+    // the barrel mid-Assembly — Act 1 views from -Z, Act 2 from +Z, so the path
+    // crosses the axis. From there a sideways drift of a few hundredths is the
+    // one thing a visitor can see. Parts separate fore-and-aft and up-and-down,
+    // never sideways, and that has to hold for the whole travel, not just at
+    // the ends.
+    for (const progress of SCROLL_SAMPLES) {
+      const { parts } = deriveSceneState(progress);
+      for (const name of PART_NAMES) {
+        expect(parts[name].position[2]).toBe(0);
+      }
+    }
+  });
+
   it("moves Parts monotonically toward the assembled pose", () => {
     const exploded = explodedSpread(SCROLL_WINDOWS.assembly.start);
     const halfway = explodedSpread(midpoint(SCROLL_WINDOWS.assembly));

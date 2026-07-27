@@ -101,22 +101,38 @@ export interface Transform {
  * and the fittings come away from underneath it. Exploding all eight loses the
  * silhouette the Act 1 composition is built around.
  *
- * Travel is down and slightly toward the camera, so a Part clears the body
- * rather than hiding behind it, and short: against the 1.16-long rifle these
- * read as clean gaps at Act 1's tight framing (see `CAMERA_POSES.hero`).
+ * **Every offset stays in the rifle's own X-Y plane — Z is always zero.** Z is
+ * the rifle's 0.113 of thickness, so any offset on it takes a Part off the
+ * shared centreline, and the camera passes straight down the barrel during
+ * Assembly (Act 1 views from -Z, Act 2 from +Z, so the path crosses the axis).
+ * From there even a 0.03 sideways drift is the one thing you can see. Parts
+ * separate fore-and-aft and up-and-down; never sideways.
+ *
+ * Travel is short: against the 1.16-long rifle these read as clean gaps at
+ * Act 1's tight framing (see `CAMERA_POSES.hero`).
  */
 const EXPLODED_OFFSETS: Record<PartName, Transform> = {
-  // The body: assembled even while Exploded.
-  Rifle_Barrel: { position: [0, 0, 0], rotation: [0, 0, 0] },
+  // The receiver is the chassis the rest comes off, and holds still.
   Rifle_Receiver: { position: [0, 0, 0], rotation: [0, 0, 0] },
-  Rifle_Scope: { position: [0, 0, 0], rotation: [0, 0, 0] },
-  Rifle_MuzzleBrake: { position: [0, 0, 0], rotation: [0, 0, 0] },
 
-  // The fittings, dropped clear of it.
-  Rifle_Stock: { position: [0, -0.09, -0.04], rotation: [0, 0, 0] },
-  Rifle_Magazine: { position: [0, -0.1, -0.03], rotation: [0, 0, 0] },
-  Rifle_Bolt: { position: [0, -0.12, -0.05], rotation: [0, 0, 0] },
-  Rifle_Bipod: { position: [0, -0.14, -0.03], rotation: [0, 0, 0] },
+  // Forward off the muzzle end. The brake travels further than the barrel it
+  // threads onto, or the two end up occupying the same space.
+  Rifle_MuzzleBrake: { position: [0.16, 0, 0], rotation: [0, 0, 0] },
+  Rifle_Barrel: { position: [0.09, 0, 0], rotation: [0, 0, 0] },
+
+  // Up off the top rail. The scope already sits highest on the rifle, so it has
+  // the least headroom in Act 1's frame before it leaves the top of it.
+  Rifle_Scope: { position: [0, 0.07, 0], rotation: [0, 0, 0] },
+
+  // Back and up off the rear of the receiver.
+  Rifle_Stock: { position: [-0.05, 0.06, 0], rotation: [0, 0, 0] },
+
+  // Down out of the underside. The bolt draws only just clear of the receiver
+  // it slides in; the bipod hangs below the barrel, where the frame runs out
+  // fastest, so it stays shallower than the magazine despite mounting lower.
+  Rifle_Bolt: { position: [0, -0.05, 0], rotation: [0, 0, 0] },
+  Rifle_Magazine: { position: [-0.04, -0.16, 0], rotation: [0, 0, 0] },
+  Rifle_Bipod: { position: [0, -0.1, 0], rotation: [0, 0, 0] },
 };
 
 /**
@@ -162,16 +178,25 @@ const CAMERA_POSES: Record<Act, CameraPose> = {
    *
    * Note the target: the rifle's centre is at y = 0.125, not at the origin,
    * which sits under the stock.
+   *
+   * Then panned right and pulled back to 0.95x. Both are applied to camera and
+   * target together — the pan along the camera's own right vector, the zoom by
+   * scaling the offset between them — so neither one rotates the framing that
+   * the reference fixed.
    */
-  hero: { position: [0.625, 0.7, -0.58], target: [0, 0.125, 0], fov: 26 },
+  hero: { position: [0.726, 0.73, -0.538], target: [0.068, 0.125, 0.073], fov: 26 },
   /**
    * Act 2: three-quarter from the other side and lower. Framed as close as the
    * rifle allows while still holding all of it — the Gunsmith View has to carry
    * a Callout on every Part at once (ticket 13), so cropping an end would put a
    * Callout off-screen. At this distance the rifle spans about three quarters
    * of the frame.
+   *
+   * Camera and target are both shifted along the camera's own right vector, so
+   * the rifle sits left of centre without the framing rotating. Panning by
+   * moving the target alone would swing the camera and change the angle.
    */
-  gunsmith: { position: [0.73, 0.216, 1.131], target: [0, 0.125, 0], fov: 30 },
+  gunsmith: { position: [0.864, 0.216, 1.044], target: [0.134, 0.125, -0.087], fov: 30 },
   /** Act 3: raised and pulled back to hold all five objects. */
   lineup: { position: [0, 1.2, 6.5], target: [0, -1.4, 0], fov: 40 },
 };
@@ -189,7 +214,7 @@ const CAMERA_POSES: Record<Act, CameraPose> = {
  * framings carry over.
  */
 const STILL_CAMERA_POSES: Record<Act, CameraPose> = {
-  hero: { position: [0.82, 0.88, -0.76], target: [0, 0.125, 0], fov: 26 },
+  hero: { position: [0.888, 0.88, -0.687], target: [0.068, 0.125, 0.073], fov: 26 },
   gunsmith: { ...CAMERA_POSES.gunsmith },
   lineup: { ...CAMERA_POSES.lineup },
 };

@@ -108,7 +108,17 @@ With the side fixed, elevation 34°, azimuth 133° and distance 1.03 reproduce t
 
 The Gunsmith copy was being read over a rifle that was still coming apart. Measured in the browser rather than guessed: the Act 2 heading scrolls into view at progress **0.25** and is centred at **0.39**, while `assembly` did not finish until **0.38** — and `scrub: 1` adds a further second of lag on top. The window boundaries answer to the DOM, so Assembly now runs 0.06 → 0.24 and the Gunsmith hold opens at 0.24, before its own copy is legible. `SCROLL_WINDOWS` carries the measured numbers in a comment; if the section heights change, these have to be re-measured with them.
 
-Act 2 also moved closer, to 1.35 from 1.85 — as close as the rifle allows while still holding all of it, since every Part needs to carry a Callout (ticket 13) and a cropped end would put one off-screen.
+Act 2 also moved closer, to 1.35 from 1.85 — as close as the rifle allows while still holding all of it, since every Part needs to carry a Callout (ticket 13) and a cropped end would put one off-screen. It is then panned so the rifle sits left of centre, by shifting **camera and target together** along the camera's own right vector; moving the target alone would have swung the camera and changed the angle that had just been agreed.
+
+### Parts stay on the centreline
+
+Reviewing the Exploded state mid-Assembly turned up a fault the end states hid. The camera passes **straight down the barrel** during Assembly — Act 1 views from `-Z`, Act 2 from `+Z`, so the path crosses the rifle's own axis — and from there the sideways component of the offsets was plainly visible as Parts drifting off the shared centreline.
+
+Z is also the rifle's 0.113 of thickness, its smallest dimension, so a 0.03 offset that reads as nothing in an isolated screenshot is a large fraction of the body's width. Every offset now lies in the rifle's X-Y plane: Parts separate fore-and-aft and up-and-down, never sideways. A test walks the whole Assembly and asserts `position[2] === 0` for every Part at every sample, because this is exactly the kind of invariant that gets broken by a later nudge that looks fine at both ends.
+
+The scope's travel was cut from 0.14 to 0.07 after the first attempt lifted it out of the top of Act 1's frame — it already sits highest on the rifle, so it has the least headroom of anything. The bipod is shallower than the magazine for the same reason: it hangs under the barrel, where the bottom of the frame runs out fastest.
+
+Act 1 was then panned right and pulled back to 0.95x, by the same rule as Act 2 — pan along the camera's own right vector, zoom by scaling the offset between camera and target, both applied to the pair together, so neither operation rotates the framing the reference fixed. Both the scrubbed pose and the reduced-motion still were moved together; letting them drift apart would mean two different Act 1 compositions.
 - **The reduced-motion Act 1 still keeps the same angle but steps back** to 1.35. The scrubbed Act 1 crops deliberately and the visitor scrolls on within a moment; a still is the whole of what that visitor will ever see, so nothing may be cut off permanently.
 - **A second white key was added.** The new Act 1 camera sits almost exactly on the red rim light's axis, and a rim light on the camera's own axis stops rimming anything — it floods the subject with its colour. Act 1 rendered blood-red. The camera also crosses sides during the page (Act 1 from `-Z`, Acts 2–3 from `+Z`), so one key can only ever cover half the story. Red stays where it rims Acts 2 and 3, at reduced intensity, and a second neutral key covers Act 1.
 

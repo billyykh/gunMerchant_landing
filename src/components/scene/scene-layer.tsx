@@ -31,7 +31,7 @@ export function SceneLayer() {
         <Canvas
           // The Act 1 keyframe from Scene State, so the first painted frame is
           // already the pose `useFrame` is about to set.
-          camera={{ position: [0.625, 0.7, -0.58], fov: 26, near: 0.1, far: 100 }}
+          camera={{ position: [0.726, 0.73, -0.538], fov: 26, near: 0.1, far: 100 }}
           dpr={[1, 2]}
           gl={{ antialias: true }}
         >
