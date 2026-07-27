@@ -18,3 +18,19 @@ if (!globalThis.ResizeObserver) {
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function scrollIntoView() {};
 }
+
+// GSAP's ScrollTrigger probes media queries the moment it registers, and the
+// reduced-motion hook asks for one directly. Tests that care about the answer
+// stub this themselves; this default just lets the modules load.
+if (!globalThis.matchMedia) {
+  globalThis.matchMedia = ((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  })) as typeof globalThis.matchMedia;
+}

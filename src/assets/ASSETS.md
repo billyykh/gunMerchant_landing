@@ -8,10 +8,18 @@ Models are **sourced from free Sketchfab assets and normalised in Blender**
 (ADR-0003): pick wanted variants, strip armatures, decimate to budget, rename to
 this contract, fix origins/scale, re-export as GLB into this directory.
 
+## Where the files live
+
+- **Contract exports** — `public/models/*.glb`. These are the files the page
+  loads, so they must be served at a URL: drei's `useGLTF` fetches them, and
+  Next.js serves only `public/`. Referenced in code as `/models/<name>.glb`.
+- **Raw Sketchfab downloads** — this directory, under their download names.
+  They are never loaded by the page; they are kept for provenance and for
+  re-running the normalisation.
+
 ## Source files & provenance
 
-Raw Sketchfab downloads live in this directory under their download names; code
-only ever loads the contract-named exports.
+Code only ever loads the contract-named exports.
 
 | Raw file          | Contract export          | Sketchfab source / author / licence      |
 | ----------------- | ------------------------ | ---------------------------------------- |
