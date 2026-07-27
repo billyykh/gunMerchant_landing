@@ -303,6 +303,14 @@ Label + leader line + anchor dot. Label: `hud` step, `--thermal-4`,
 `--surface-1` at 90% opacity behind it, 1px `--thermal-3` at 40% border, corner
 brackets. Enters `--dur-base`. On touch, tap substitutes for hover.
 
+The leader **leans away from the subject** — up for an anchor above its centre,
+down for one below — rather than running horizontally. A rifle photographed
+side-on fills the frame edge to edge, so a horizontal leader lays every label
+across the barrel, where a dark label on a dark subject is the one place the
+palette cannot supply contrast. Leaning puts the label against the background.
+The subject's centre needs no measuring: the camera looks at it, so it projects
+to the origin at every Act and every framing.
+
 ### Detail Panel
 Right-side panel, width `min(420px, 92vw)`, `--surface-1`, 1px left border
 `--thermal-3` at 30%, corner brackets top-left and bottom-left, one scan sweep on
@@ -312,7 +320,18 @@ primary CTA (filled `--thermal-3`, `--thermal-6` text).
 
 Closes on the close control, Escape, or click-away. Focus trapped while open,
 returned to the triggering element on close. `aria-modal` semantics via the Radix
-primitive — do not hand-roll.
+primitive — do not hand-roll. (Base UI, which this project actually builds on,
+marks the rest of the page `aria-hidden` instead of setting `aria-modal`. Same
+guarantee, reached the other way round; still the primitive's job, not ours.)
+
+Focus on open goes to **the panel itself**, not to the first control in it.
+Landing on the close control announces "Close, button" before the product the
+visitor asked to see; the container reads its title, and Tab reaches the close
+control immediately after.
+
+It is a bottom sheet everywhere below `lg`, not only below `sm`. §9 gives the
+right-side panel to `lg` and up, and between the two there is not enough width
+to run a 420px panel beside a scene and still have a scene.
 
 ### Buttons
 - **Primary**: filled `--thermal-3`, text `--thermal-6`, 2px radius, hover

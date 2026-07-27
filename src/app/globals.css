@@ -286,6 +286,90 @@
     border-bottom-color: var(--thermal-3);
     border-right-color: var(--thermal-3);
   }
+
+  /* Both brackets down the leading edge, for a panel whose other edge is the
+   * edge of the viewport. Diagonal brackets there would put one mark in open
+   * space and the other off-screen. MASTER.md §7 (Detail Panel). */
+  .hud-brackets-left {
+    position: relative;
+  }
+
+  .hud-brackets-left::before,
+  .hud-brackets-left::after {
+    content: "";
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    left: 0;
+    border-style: solid;
+    border-width: 0;
+    border-left-width: 1px;
+    border-left-color: var(--thermal-3);
+    pointer-events: none;
+  }
+
+  .hud-brackets-left::before {
+    top: 0;
+    border-top-width: 1px;
+    border-top-color: var(--thermal-3);
+  }
+
+  .hud-brackets-left::after {
+    bottom: 0;
+    border-bottom-width: 1px;
+    border-bottom-color: var(--thermal-3);
+  }
+
+  /* Scan sweep — a single downward gradient pass on Detail Panel open. Runs
+   * once and stops; infinite animation is reserved for loading indicators
+   * (MASTER.md §5). */
+  .hud-scan {
+    background: linear-gradient(
+      to bottom,
+      transparent 0%,
+      color-mix(in oklab, var(--thermal-4) 12%, transparent) 45%,
+      color-mix(in oklab, var(--thermal-4) 20%, transparent) 50%,
+      transparent 55%
+    );
+    animation: hud-scan var(--dur-slow) var(--ease-out) 1 both;
+  }
+
+  /* Callout enter and exit (MASTER.md §6.2). Kept as a transition on a
+   * permanently mounted element rather than a mount/unmount animation: a
+   * Callout that unmounts the instant the pointer leaves has no exit at all,
+   * and exits are half the contract. */
+  .hud-callout {
+    --hud-callout-enter-y: 6px;
+    opacity: 0;
+    transform: translateY(var(--hud-callout-enter-y));
+    transition:
+      opacity var(--dur-exit) var(--ease-in),
+      transform var(--dur-exit) var(--ease-in);
+  }
+
+  /* One that hangs below its Part enters from above, so it always travels
+   * outward from the anchor rather than through it. */
+  .hud-callout[data-rise="down"] {
+    --hud-callout-enter-y: -6px;
+  }
+
+  .hud-callout[data-open="true"] {
+    opacity: 1;
+    transform: translateY(0);
+    transition:
+      opacity var(--dur-base) var(--ease-out),
+      transform var(--dur-base) var(--ease-out);
+  }
+
+  @keyframes hud-scan {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(100%);
+      opacity: 0;
+    }
+  }
 }
 
 /* Reduced motion is a first-class path, not a fallback. The scroll spine is
@@ -298,5 +382,14 @@
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /* §6.3 asks for a --dur-fast cross-fade here rather than a cut: the Callout
+   * is the feedback that a hover registered, and a hard swap reads as a
+   * flicker. It transforms no distance, so nothing above is being undone —
+   * only the blanket duration, for the one property that still moves. */
+  .hud-callout {
+    transform: none;
+    transition: opacity var(--dur-fast) linear !important;
   }
 }

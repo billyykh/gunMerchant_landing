@@ -5,8 +5,11 @@ import { Canvas } from "@react-three/fiber";
 
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useActInView } from "@/hooks/use-act-in-view";
+import { usePointerNdc } from "@/hooks/use-pointer-ndc";
 
+import { GunsmithHud } from "./gunsmith-hud";
 import { HeroRifle } from "./hero-rifle";
+import { createHotspotChannel } from "./hotspot-channel";
 import { LoadingReadout } from "./loading-readout";
 import { useScrollSpine } from "./use-scroll-spine";
 
@@ -24,6 +27,11 @@ export function SceneLayer() {
   const reducedMotion = usePrefersReducedMotion();
   const progressRef = useScrollSpine(!reducedMotion);
   const actInView = useActInView(reducedMotion);
+  const pointerRef = usePointerNdc();
+
+  // One channel per mounted scene, created here because it is the one place
+  // that holds both ends of it: the canvas that writes and the HUD that reads.
+  const [channel] = React.useState(createHotspotChannel);
 
   return (
     <>
@@ -42,10 +50,19 @@ export function SceneLayer() {
               progressRef={progressRef}
               reducedMotion={reducedMotion}
               actInView={actInView}
+              pointerRef={pointerRef}
+              channel={channel}
             />
           </React.Suspense>
         </Canvas>
       </div>
+
+      {/*
+       * Outside the `aria-hidden` canvas wrapper on purpose — this is the one
+       * part of the scene a visitor operates, so it has to be in the
+       * accessibility tree (MASTER.md §8).
+       */}
+      <GunsmithHud channel={channel} />
 
       <LoadingReadout />
     </>

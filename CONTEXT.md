@@ -34,6 +34,12 @@ _Avoid_: fall, transition, Act 3 intro
 The HUD leader-line and label that appears when a Part or Gear Item is hovered.
 _Avoid_: tooltip, annotation
 
+**Hotspot**:
+The control a Part or Gear Item is reached through — a DOM button held over the
+canvas at the point the object projects to, carrying its Callout and opening its
+Detail Panel. The Part is the thing; the hotspot is the handle on it.
+_Avoid_: marker, pin, hitbox
+
 **Detail Panel**:
 The slide-in panel showing specs, placeholder price, and CTA for a clicked Part or Gear Item.
 _Avoid_: modal, dialog, popup
