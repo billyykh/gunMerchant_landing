@@ -79,3 +79,44 @@ Verified: 84/84 tests pass, `npx tsc --noEmit` clean, `npm run lint` clean, `npm
 
 **Note for ticket 14:** the seam already returns the Lineup arrangement in `state.gear`; the Gear Item meshes just need loading and binding the same way the Parts are.
 
+## Revision — framing, matched to a supplied reference
+
+The original framings were authored blind, before the real model was in frame, and were reworked twice: first by eye, then against a reference render the requester supplied of the exact Act 1 angle and zoom they wanted.
+
+### Measuring the model instead of guessing at it
+
+The Blender MCP bridge was not connected, so the reference camera could not simply be read out of the blend file. Instead the GLB was parsed directly for each Part's world-space bounds, which pinned down facts the framing work had been guessing at:
+
+- The rifle's **long axis is X** — muzzle at `+0.58`, butt at `-0.58`, overall length **1.16**
+- Up is Y (scope crown at `0.25`), and the rifle is only **0.113 thick** on Z
+- Its centre is `(0, 0.125, 0)`. Every camera pose had been targeting the origin, which sits under the stock, not at the subject.
+
+### The Act 1 side is forced, not chosen
+
+The reference has the butt running to the top-right and the muzzle off the bottom-left. Requiring the `-X` axis to project up **and** to the right needs `sin(az) > 0` and `cos(az) < 0` at the same time, which admits only the `+X/-Z` side of the rifle. The lateral side is a consequence of the composition — worth recording, because it looked like a free choice that would have to be settled by squinting at the reference.
+
+With the side fixed, elevation 34°, azimuth 133° and distance 1.03 reproduce the reference's 31° on-screen axis and its framing: `[0.625, 0.7, -0.58]`, target `[0, 0.125, 0]`, fov 26.
+
+### What that forced elsewhere
+
+- **Act 2 is now further out than Act 1**, which inverts the page's usual direction. Act 1 is a close portrait that crops the muzzle on purpose; the Gunsmith View has to hold all eight Parts at once for their Callouts (ticket 13), so it cannot be tighter. Two tests asserted the old direction and were rewritten to state the new intent rather than bent to fit.
+- **`EXPLODED_OFFSETS` rebuilt from a second reference render, of the Exploded state itself.** Two rules came out of it. **Nothing rotates** — Parts separate by translation alone, because a Part that tumbles as it comes off reads as having fallen off the rifle rather than been taken off it. And **not every Part separates**: the barrel, receiver, scope and brake stay as one body so the rifle is still recognisably a rifle, and only the fittings drop clear of it, down and slightly toward the camera so they do not hide behind the body.
+
+  Two earlier attempts were rejected before this one — a scattered spread with per-Part rotation, then a technical-diagram version sliding every Part out along its own mount axis. Both missed that the reference keeps the rifle's silhouette intact. Do not re-open this without new direction.
+
+### Assembly finished too late to be believed
+
+The Gunsmith copy was being read over a rifle that was still coming apart. Measured in the browser rather than guessed: the Act 2 heading scrolls into view at progress **0.25** and is centred at **0.39**, while `assembly` did not finish until **0.38** — and `scrub: 1` adds a further second of lag on top. The window boundaries answer to the DOM, so Assembly now runs 0.06 → 0.24 and the Gunsmith hold opens at 0.24, before its own copy is legible. `SCROLL_WINDOWS` carries the measured numbers in a comment; if the section heights change, these have to be re-measured with them.
+
+Act 2 also moved closer, to 1.35 from 1.85 — as close as the rifle allows while still holding all of it, since every Part needs to carry a Callout (ticket 13) and a cropped end would put one off-screen.
+- **The reduced-motion Act 1 still keeps the same angle but steps back** to 1.35. The scrubbed Act 1 crops deliberately and the visitor scrolls on within a moment; a still is the whole of what that visitor will ever see, so nothing may be cut off permanently.
+- **A second white key was added.** The new Act 1 camera sits almost exactly on the red rim light's axis, and a rim light on the camera's own axis stops rimming anything — it floods the subject with its colour. Act 1 rendered blood-red. The camera also crosses sides during the page (Act 1 from `-Z`, Acts 2–3 from `+Z`), so one key can only ever cover half the story. Red stays where it rims Acts 2 and 3, at reduced intensity, and a second neutral key covers Act 1.
+
+The `Canvas` element's initial `camera` prop tracks the Act 1 keyframe, so the first painted frame is already the pose `useFrame` sets.
+
+### Verified in the browser
+
+Act 1 matches the reference angle and zoom, in neutral tan and black rather than red. Act 2 holds the whole assembled rifle in frame. Act 3 unchanged.
+
+One caution: the pane renders at roughly 1.2 aspect, and the framing was solved for ~16:9. Since three.js fixes the **vertical** FOV, a narrower window crops horizontally — Act 1 is tighter there than the reference. Ticket 16 owns responsive framing; that is where the narrow-viewport case should be settled.
+

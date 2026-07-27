@@ -29,7 +29,9 @@ export function SceneLayer() {
     <>
       <div className="fixed inset-0 z-0 bg-surface-0" aria-hidden="true">
         <Canvas
-          camera={{ position: [0, 0.9, 5.2], fov: 42, near: 0.1, far: 100 }}
+          // The Act 1 keyframe from Scene State, so the first painted frame is
+          // already the pose `useFrame` is about to set.
+          camera={{ position: [0.625, 0.7, -0.58], fov: 26, near: 0.1, far: 100 }}
           dpr={[1, 2]}
           gl={{ antialias: true }}
         >
@@ -57,16 +59,23 @@ export function SceneLayer() {
  * a silhouette with no surface. The background stays `--surface-0`; only the
  * subject is lifted.
  *
- * White key from camera-left for the machined metal, red rim from behind-right
- * to pick out the profile against the page, cool fill from below so the
- * underside does not go solid black.
+ * Two white keys rather than one, because the camera crosses sides during the
+ * page: Act 1 views from -Z, Acts 2 and 3 from +Z. A single key leaves
+ * whichever Act it is behind lit by nothing but ambient and the red — and a
+ * rim light that ends up on the camera's own axis stops rimming anything and
+ * simply floods the subject with its colour. The red stays on the +X/-Z side
+ * where it rims the profile for Acts 2 and 3; the second key covers Act 1 from
+ * the side the red would otherwise wash.
+ *
+ * Cool fill from below so the underside does not go solid black.
  */
 function SceneLighting() {
   return (
     <>
       <ambientLight intensity={1.1} />
       <directionalLight position={[-4, 5, 4]} intensity={5} color="#fff7ed" />
-      <directionalLight position={[5, 1, -3]} intensity={3.5} color="#dc2626" />
+      <directionalLight position={[2, 4, -4]} intensity={3.2} color="#fff7ed" />
+      <directionalLight position={[5, 1, -3]} intensity={2} color="#dc2626" />
       <directionalLight position={[0, -3, 2]} intensity={1.4} color="#7f8fa6" />
     </>
   );

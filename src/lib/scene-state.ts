@@ -18,14 +18,22 @@ export type Act = "hero" | "gunsmith" | "lineup";
  * interaction is offered during the holds and withdrawn during the transitions.
  * A `*Hold` window is where an Act sits still; the other two are the moves
  * between them.
+ *
+ * The boundaries answer to the DOM, which is what a visitor is actually
+ * reading. With the Act sections at their current heights, the Gunsmith
+ * heading scrolls into view at progress 0.25 and is centred at 0.39 — so
+ * Assembly has to be finished by 0.25, not merely started. Ending it at 0.38
+ * left the rifle visibly coming apart underneath copy that had already begun
+ * describing it as assembled, and `scrub: 1` adds a further second of lag on
+ * top. If the section heights change, re-measure and move these with them.
  */
 export const SCROLL_WINDOWS = {
   /** Act 1 holds the Exploded arrangement before anything moves. */
-  heroHold: { start: 0, end: 0.08 },
-  /** Act 1 → 2: the Parts fly together. */
-  assembly: { start: 0.08, end: 0.38 },
+  heroHold: { start: 0, end: 0.06 },
+  /** Act 1 → 2: the Parts fly together, done before Act 2's copy is legible. */
+  assembly: { start: 0.06, end: 0.24 },
   /** Act 2 settled: the Gunsmith View, where Parts are inspectable. */
-  gunsmithHold: { start: 0.38, end: 0.62 },
+  gunsmithHold: { start: 0.24, end: 0.62 },
   /** Act 2 → 3: the Hero Rifle falls into the Lineup. */
   drop: { start: 0.62, end: 0.82 },
   /** Act 3 settled: the Lineup, where Gear Items are inspectable. */
@@ -79,21 +87,36 @@ export interface Transform {
  *
  * The GLB exports every Part already in its assembled position (ASSETS.md), so
  * the assembled pose is the zero offset and Exploded is authored here in code.
- * Parts disperse into a shallow slab so they read as a considered arrangement
- * behind the Act 1 brand lockup rather than as debris.
+ *
+ * Matched to a supplied reference render of the Exploded state, which settles
+ * two things this had been getting wrong:
+ *
+ * **Nothing rotates.** Every Part keeps the rifle's orientation and separates
+ * by translation alone. A Part that tumbles as it comes off reads as a thing
+ * that fell off the rifle; a Part that stays square to the others reads as a
+ * thing that was taken off it.
+ *
+ * **Not every Part separates.** The barrel, receiver, scope and muzzle brake
+ * stay as one body in the reference — the rifle is still recognisably a rifle —
+ * and the fittings come away from underneath it. Exploding all eight loses the
+ * silhouette the Act 1 composition is built around.
+ *
+ * Travel is down and slightly toward the camera, so a Part clears the body
+ * rather than hiding behind it, and short: against the 1.16-long rifle these
+ * read as clean gaps at Act 1's tight framing (see `CAMERA_POSES.hero`).
  */
 const EXPLODED_OFFSETS: Record<PartName, Transform> = {
-  Rifle_Barrel: { position: [0.55, 0.42, -0.3], rotation: [0.18, -0.32, 0.12] },
-  Rifle_Receiver: {
-    position: [-0.12, 0.08, 0.34],
-    rotation: [-0.1, 0.22, -0.06],
-  },
-  Rifle_Bolt: { position: [0.24, -0.46, 0.52], rotation: [0.42, 0.5, -0.28] },
-  Rifle_Stock: { position: [-0.78, -0.24, -0.18], rotation: [-0.14, -0.38, 0.2] },
-  Rifle_Scope: { position: [0.08, 0.62, 0.28], rotation: [0.26, 0.16, -0.34] },
-  Rifle_Magazine: { position: [-0.3, -0.58, 0.16], rotation: [-0.3, 0.44, 0.18] },
-  Rifle_Bipod: { position: [0.42, -0.36, -0.44], rotation: [0.22, -0.26, -0.4] },
-  Rifle_MuzzleBrake: { position: [0.92, 0.2, 0.22], rotation: [-0.24, 0.36, 0.3] },
+  // The body: assembled even while Exploded.
+  Rifle_Barrel: { position: [0, 0, 0], rotation: [0, 0, 0] },
+  Rifle_Receiver: { position: [0, 0, 0], rotation: [0, 0, 0] },
+  Rifle_Scope: { position: [0, 0, 0], rotation: [0, 0, 0] },
+  Rifle_MuzzleBrake: { position: [0, 0, 0], rotation: [0, 0, 0] },
+
+  // The fittings, dropped clear of it.
+  Rifle_Stock: { position: [0, -0.09, -0.04], rotation: [0, 0, 0] },
+  Rifle_Magazine: { position: [0, -0.1, -0.03], rotation: [0, 0, 0] },
+  Rifle_Bolt: { position: [0, -0.12, -0.05], rotation: [0, 0, 0] },
+  Rifle_Bipod: { position: [0, -0.14, -0.03], rotation: [0, 0, 0] },
 };
 
 /**
@@ -126,10 +149,29 @@ export interface CameraPose {
  * well composed at every scroll position rather than only at the ends.
  */
 const CAMERA_POSES: Record<Act, CameraPose> = {
-  /** Act 1: wide and pulled back — the Parts read as a field behind the type. */
-  hero: { position: [0, 0.9, 5.2], target: [0, 0.2, 0], fov: 42 },
-  /** Act 2: close three-quarter, tighter lens. Inspection framing. */
-  gunsmith: { position: [1.5, 0.3, 2.2], target: [0, 0, 0], fov: 32 },
+  /**
+   * Act 1: a tight high three-quarter, matched to a supplied reference frame —
+   * muzzle running off the bottom-left, butt into the top-right corner.
+   *
+   * Solved rather than eyeballed. The GLB puts the rifle's long axis on X
+   * (muzzle +X, butt -X), so requiring the -X axis to project up and to the
+   * right on screen forces `sin(az) > 0` and `cos(az) < 0` at once — which
+   * admits only the +X/-Z side of the rifle. The side is a consequence of the
+   * composition, not a choice. Elevation 34°, azimuth 133°, distance 1.03 then
+   * reproduce the reference's 31° on-screen axis and its framing.
+   *
+   * Note the target: the rifle's centre is at y = 0.125, not at the origin,
+   * which sits under the stock.
+   */
+  hero: { position: [0.625, 0.7, -0.58], target: [0, 0.125, 0], fov: 26 },
+  /**
+   * Act 2: three-quarter from the other side and lower. Framed as close as the
+   * rifle allows while still holding all of it — the Gunsmith View has to carry
+   * a Callout on every Part at once (ticket 13), so cropping an end would put a
+   * Callout off-screen. At this distance the rifle spans about three quarters
+   * of the frame.
+   */
+  gunsmith: { position: [0.73, 0.216, 1.131], target: [0, 0.125, 0], fov: 30 },
   /** Act 3: raised and pulled back to hold all five objects. */
   lineup: { position: [0, 1.2, 6.5], target: [0, -1.4, 0], fov: 40 },
 };
@@ -137,14 +179,17 @@ const CAMERA_POSES: Record<Act, CameraPose> = {
 /**
  * The `prefers-reduced-motion` framings — one composed still per Act.
  *
- * Act 1 gets its own pose rather than borrowing the scroll keyframe: that one
- * is pulled back to hold the Exploded Parts spread behind the brand lockup,
- * and with nothing Exploded to hold it strands the assembled rifle in the
- * middle of an empty frame. Acts 2 and 3 are already composed around a settled
- * subject, so their framings carry over.
+ * Act 1 gets its own pose rather than borrowing the scroll keyframe. The
+ * scrubbed Act 1 deliberately crops — the muzzle runs off the bottom of the
+ * frame, and the visitor scrolls on within a moment. A still is the whole of
+ * what this visitor will ever see of Act 1, so it holds the same angle but
+ * steps back far enough that nothing is cut off.
+ *
+ * Acts 2 and 3 are already composed around a settled subject, so their
+ * framings carry over.
  */
 const STILL_CAMERA_POSES: Record<Act, CameraPose> = {
-  hero: { position: [0.9, 0.35, 3.4], target: [0, 0, 0], fov: 38 },
+  hero: { position: [0.82, 0.88, -0.76], target: [0, 0.125, 0], fov: 26 },
   gunsmith: { ...CAMERA_POSES.gunsmith },
   lineup: { ...CAMERA_POSES.lineup },
 };

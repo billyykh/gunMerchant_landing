@@ -312,8 +312,17 @@ primitive — do not hand-roll.
 - **Primary**: filled `--thermal-3`, text `--thermal-6`, 2px radius, hover
   `--thermal-4`, `--dur-fast`.
 - **Secondary**: transparent, 1px `rgba(255,255,255,0.14)` border, text
-  `--text-primary`, hover border `--thermal-3`.
+  `--text-primary`, hover `background: rgba(255,255,255,0.06)`. The border does
+  **not** change on hover.
 - **Ghost**: text only, `--text-secondary`, hover `--thermal-4`.
+
+**Bordered controls change background on hover, never border colour.** A border
+that turns `--thermal-3` on hover puts a lit red outline on every control the
+pointer crosses, which fights the one-glowing-element rule (§4) and reads as a
+selected or error state rather than a hover. A background lift is quieter, is
+the same gesture on every bordered control, and leaves red for the things that
+have earned it. Applies to the search trigger and secondary buttons alike; text
+controls (nav links, ghost buttons) still shift to `--thermal-4`.
 
 Minimum hit area 44×44px including on desktop icon buttons. Minimum 8px between
 adjacent targets.

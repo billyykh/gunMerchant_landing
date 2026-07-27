@@ -88,10 +88,20 @@ describe("Assembly", () => {
     }
   });
 
-  it("offsets every Part away from the assembled pose while Exploded", () => {
+  it("separates the fittings while Exploded, and only by translation", () => {
+    // Not every Part comes off: the reference Exploded state keeps the barrel,
+    // receiver, scope and brake together as one body so the rifle stays
+    // recognisable, and drops the fittings clear of it. What every Part does
+    // share is orientation — separation is translation only, never rotation,
+    // or a Part reads as having fallen off rather than been taken off.
     const { parts } = deriveSceneState(0);
+    const separated = PART_NAMES.filter(
+      (name) => length(parts[name].position) > 0
+    );
+
+    expect(separated.length).toBeGreaterThan(0);
     for (const name of PART_NAMES) {
-      expect(length(parts[name].position)).toBeGreaterThan(0);
+      expect(parts[name].rotation).toEqual([0, 0, 0]);
     }
   });
 
@@ -189,10 +199,14 @@ describe("the Lineup", () => {
 });
 
 describe("camera", () => {
-  it("closes in on the Hero Rifle as Assembly completes", () => {
-    expect(framingDistance(deriveSceneState(SCROLL_WINDOWS.assembly.end))).toBeLessThan(
-      framingDistance(deriveSceneState(0))
-    );
+  it("opens out as Assembly completes, so the whole rifle is in frame to inspect", () => {
+    // Act 1 is a close portrait that deliberately crops the muzzle. The
+    // Gunsmith View has to hold all eight Parts at once for their Callouts, so
+    // Assembly ends further out than it began — the one place on this page
+    // where the camera retreats rather than closes in.
+    expect(
+      framingDistance(deriveSceneState(SCROLL_WINDOWS.assembly.end))
+    ).toBeGreaterThan(framingDistance(deriveSceneState(0)));
   });
 
   it("pulls back out to frame the whole Lineup", () => {
@@ -310,11 +324,12 @@ describe("reduced motion", () => {
     }
   });
 
-  it("composes Act 1 for a single assembled rifle, not for a field of Parts", () => {
-    // The animated Act 1 camera is pulled back to hold the Exploded Parts
-    // spread behind the brand lockup. With nothing Exploded to hold, that
-    // framing strands the rifle in the middle of an empty frame.
-    expect(framingDistance(deriveStaticSceneState("hero"))).toBeLessThan(
+  it("holds the whole of Act 1 in frame, because a still cannot be scrolled past", () => {
+    // The scrubbed Act 1 crops on purpose — the muzzle runs off the bottom of
+    // the frame and the visitor scrolls on within a moment. A still is the
+    // whole of what this visitor will ever see of Act 1, so it keeps the angle
+    // and steps back rather than cutting the subject off permanently.
+    expect(framingDistance(deriveStaticSceneState("hero"))).toBeGreaterThan(
       framingDistance(deriveSceneState(0))
     );
   });

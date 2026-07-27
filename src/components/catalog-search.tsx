@@ -73,7 +73,7 @@ export function CatalogSearch() {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm text-text-secondary transition-colors duration-[var(--dur-fast)] hover:border-thermal-3 hover:text-text-primary"
+        className="flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm text-text-secondary transition-colors duration-[var(--dur-fast)] hover:bg-white/[0.06] hover:text-text-primary"
       >
         <SearchIcon className="size-4" aria-hidden="true" />
         <span>Search</span>

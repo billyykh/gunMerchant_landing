@@ -225,7 +225,7 @@ export default function StyleGuide() {
           </button>
           <button
             type="button"
-            className="min-h-11 rounded-md border border-[var(--input)] px-5 font-medium text-text-primary transition-colors hover:border-thermal-3"
+            className="min-h-11 rounded-md border border-[var(--input)] px-5 font-medium text-text-primary transition-colors hover:bg-white/[0.06]"
             style={{ transitionDuration: "var(--dur-fast)" }}
           >
             View specs
