@@ -73,11 +73,21 @@ export function CatalogSearch() {
         ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
-        className="flex h-11 items-center gap-2 rounded-md border border-input px-3 text-sm text-text-secondary transition-colors duration-[var(--dur-fast)] hover:bg-white/[0.06] hover:text-text-primary"
+        className="flex size-11 shrink-0 items-center justify-center gap-2 rounded-md border border-input text-sm text-text-secondary transition-colors duration-[var(--dur-fast)] hover:bg-white/[0.06] hover:text-text-primary sm:w-auto sm:justify-start sm:px-3"
       >
         <SearchIcon className="size-4" aria-hidden="true" />
-        <span>Search</span>
-        <kbd className="hud-label ml-2 border border-input px-1.5 py-0.5">
+        {/*
+          Below `sm` the trigger collapses to its icon: the row cannot carry the
+          label and the shortcut alongside a wordmark, a cart and a menu without
+          wrapping the hint mid-word. The name stays in the accessibility tree
+          either way — a control announced only as "button" is not a saving.
+
+          The shortcut hint goes with it rather than shrinking. A touch device
+          has no Ctrl key to press, so advertising one is noise (MASTER.md §7
+          asks for the hint inline on the trigger, not for it at every width).
+        */}
+        <span className="sr-only sm:not-sr-only">Search</span>
+        <kbd className="hud-label ml-2 hidden border border-input px-1.5 py-0.5 sm:inline-block">
           {shortcutHint}
         </kbd>
       </button>

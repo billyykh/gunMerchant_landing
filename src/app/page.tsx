@@ -11,25 +11,23 @@
  * Visual contract: docs/design-system/MASTER.md
  */
 import { ActSection } from "@/components/act-section";
-import { CatalogSearch } from "@/components/catalog-search";
 import { SceneLayer } from "@/components/scene/scene-layer";
+import { SiteHeader } from "@/components/site-header";
 
 export default function Home() {
   return (
     <>
       <SceneLayer />
+      <SiteHeader />
 
       <main className="relative z-10 flex flex-1 flex-col">
         <ActSection
           act="hero"
-          className="flex min-h-screen flex-col justify-between px-6 py-12 sm:px-12 lg:px-16"
+          // Top padding clears the fixed 64px header rather than tucking the
+          // Act marker under it.
+          className="flex min-h-screen flex-col justify-between px-6 pt-24 pb-12 sm:px-12 lg:px-16"
         >
-          <div className="flex items-start justify-between gap-4">
-            <p className="hud-label">{"// 01 — Act 1"}</p>
-            {/* Ticket 12 moves this into the Header; it sits here so the
-                palette is reachable before the Header exists. */}
-            <CatalogSearch />
-          </div>
+          <p className="hud-label">{"// 01 — Act 1"}</p>
 
           <div className="flex flex-col gap-6">
             <h1 className="brand-lockup text-text-primary">VANTAK</h1>

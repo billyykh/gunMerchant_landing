@@ -282,6 +282,12 @@ Search trigger is a **button showing the `⌘K` / `Ctrl K` hint inline** — not
 input. A text-shaped control that doesn't accept text is a known dark pattern and
 breaks keyboard expectations.
 
+Below `sm` the trigger collapses to its icon and the hint is dropped, not shrunk.
+The row cannot carry a label and a shortcut alongside the wordmark, cart and menu
+control without wrapping the hint mid-word, and a touch device has no `Ctrl` key
+to press, so advertising one is noise. The accessible name stays at every width —
+a control announced as nothing but "button" is not a saving.
+
 Cart: `lucide-react` icon, 44×44px hit area, badge pill `--thermal-3` background
 with `--thermal-6` numerals. The badge count must also be exposed to screen readers
 as text (`aria-label="Cart, 3 items"`), never colour/shape alone.
@@ -323,6 +329,11 @@ selected or error state rather than a hover. A background lift is quieter, is
 the same gesture on every bordered control, and leaves red for the things that
 have earned it. Applies to the search trigger and secondary buttons alike; text
 controls (nav links, ghost buttons) still shift to `--thermal-4`.
+
+**Icon-only controls take the background lift too**, even though they carry no
+border. What they offer is a 44×44 target rather than a word, and lighting the
+glyph itself to `--thermal-4` reads as an active or selected state; the lift
+shows the target instead.
 
 Minimum hit area 44×44px including on desktop icon buttons. Minimum 8px between
 adjacent targets.

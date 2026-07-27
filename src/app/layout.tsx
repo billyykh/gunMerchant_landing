@@ -30,6 +30,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   themeColor: "#050506",
   colorScheme: "dark",
+  // Without this every `env(safe-area-inset-*)` resolves to 0, which makes the
+  // header's inset padding dead code rather than a no-op worth keeping. The
+  // page is edge-to-edge black anyway, so there is nothing to letterbox.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
