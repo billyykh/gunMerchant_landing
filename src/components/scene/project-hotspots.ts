@@ -1,6 +1,6 @@
 import { Box3, Vector3, type Camera, type Object3D } from "three";
 
-import { placeCallout } from "@/lib/callout-placement";
+import { placeCallout, type Viewport } from "@/lib/callout-placement";
 import type { CatalogId } from "@/lib/catalog";
 
 import type { HotspotChannel } from "./hotspot-channel";
@@ -43,7 +43,7 @@ export function projectHotspots(
   channel: HotspotChannel,
   anchored: Iterable<[CatalogId, Anchored]>,
   camera: Camera,
-  size: { width: number; height: number },
+  frame: Viewport,
   scratch: Vector3
 ): void {
   for (const [id, { object, anchor }] of anchored) {
@@ -56,7 +56,7 @@ export function projectHotspots(
       .applyMatrix4(object.matrixWorld)
       .project(camera);
 
-    const placement = placeCallout([ndc.x, ndc.y, ndc.z], size);
+    const placement = placeCallout([ndc.x, ndc.y, ndc.z], frame);
 
     // `hidden` rather than a class: a hotspot the visitor cannot see must not
     // be a tab stop either.

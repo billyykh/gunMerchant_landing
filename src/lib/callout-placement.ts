@@ -11,6 +11,16 @@ import type { Vec3 } from "./scene-state";
 export interface Viewport {
   width: number;
   height: number;
+  /**
+   * How many pixels of the viewport's bottom edge the page has covered with
+   * opaque DOM — the footer, as it scrolls up over the fixed canvas.
+   *
+   * The canvas is full-viewport and never unmounts, so the last Act is still
+   * being rendered underneath the page's closing surface. Anything down there
+   * is out of sight, and a hotspot the visitor cannot see must not be a tab
+   * stop either (MASTER.md §8).
+   */
+  occludedBottom?: number;
 }
 
 export interface CalloutPlacement {
@@ -85,7 +95,11 @@ export function placeCallout(
     visible:
       ndcZ <= 1 &&
       Math.abs(ndcX) <= 1 + CULL_MARGIN &&
-      Math.abs(ndcY) <= 1 + CULL_MARGIN,
+      Math.abs(ndcY) <= 1 + CULL_MARGIN &&
+      // No margin here, unlike the frame edges: the footer is a hard opaque
+      // edge rather than a soft one the camera breathes across, and a Callout
+      // half behind it is simply half a Callout.
+      y < viewport.height - (viewport.occludedBottom ?? 0),
   };
 }
 

@@ -12,17 +12,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useScrolledPast } from "@/hooks/use-scrolled-past";
-
-/**
- * One list, rendered twice — once inline for wide viewports and once inside the
- * sheet for narrow ones. Two hand-maintained copies is how the mobile menu ends
- * up a link behind the desktop one.
- */
-const NAV_LINKS = [
-  { label: "Rifles", href: "#" },
-  { label: "Optics", href: "#" },
-  { label: "Field Gear", href: "#" },
-] as const;
+import { PRIMARY_NAV } from "@/lib/site-nav";
 
 /** Placeholder until there is a cart to count. Announced, never inferred. */
 const CART_COUNT = 3;
@@ -75,14 +65,14 @@ export function SiteHeader() {
       <div className="flex h-16 items-center gap-6 px-6 sm:px-12 lg:px-16">
         <Link
           href="/"
-          className="font-heading text-lg font-bold tracking-[-0.04em] text-text-primary"
+          className="brand-mark text-lg text-text-primary"
         >
           VANTAK
         </Link>
 
         <nav aria-label="Primary" className="hidden md:block">
           <ul className="flex items-center gap-6">
-            {NAV_LINKS.map((link) => (
+            {PRIMARY_NAV.map((link) => (
               <li key={link.label}>
                 <NavLink {...link} />
               </li>
@@ -165,7 +155,7 @@ function MobileNav() {
 
         <nav aria-label="Primary, mobile">
           <ul className="flex flex-col gap-1">
-            {NAV_LINKS.map((link) => (
+            {PRIMARY_NAV.map((link) => (
               <li key={link.label}>
                 {/* Closing on selection is what makes the sheet feel like
                     navigation rather than a panel the visitor has to dismiss. */}

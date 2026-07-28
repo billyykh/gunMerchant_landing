@@ -91,3 +91,36 @@ describe("whether the Callout is drawn at all", () => {
     expect(placeCallout([1.05, 0, 0], VIEWPORT).visible).toBe(true);
   });
 });
+
+describe("what the page has covered", () => {
+  // The footer scrolls up over the fixed canvas as the page ends. It is opaque,
+  // so anything it covers is not on screen any more — and a hotspot the visitor
+  // cannot see must not be a tab stop either (MASTER.md §8).
+  const withFooter = { ...VIEWPORT, occludedBottom: 200 };
+
+  it("hides an anchor the footer has reached", () => {
+    // y = 700, inside the bottom 200px.
+    expect(placeCallout([0, -0.75, 0], withFooter).visible).toBe(false);
+  });
+
+  it("keeps an anchor still clear of it", () => {
+    // y = 560.
+    expect(placeCallout([0, -0.4, 0], withFooter).visible).toBe(true);
+  });
+
+  it("cuts exactly at the footer's top edge", () => {
+    const yAt = (ndcY: number) => placeCallout([0, ndcY, 0], withFooter).y;
+    const edge = -((VIEWPORT.height - 200) / VIEWPORT.height) * 2 + 1;
+
+    expect(yAt(edge)).toBe(600);
+    expect(placeCallout([0, edge, 0], withFooter).visible).toBe(false);
+    expect(placeCallout([0, edge + 0.001, 0], withFooter).visible).toBe(true);
+  });
+
+  it("covers nothing when the footer is off screen", () => {
+    expect(placeCallout([0, -0.99, 0], VIEWPORT).visible).toBe(true);
+    expect(
+      placeCallout([0, -0.99, 0], { ...VIEWPORT, occludedBottom: 0 }).visible
+    ).toBe(true);
+  });
+});

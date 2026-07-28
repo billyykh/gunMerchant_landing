@@ -37,3 +37,23 @@ describe("Act 1 Hero", () => {
     expect(trigger.closest("header")).not.toBeNull();
   });
 });
+
+describe("how the page ends", () => {
+  it("mounts the footer once", () => {
+    render(<Home />);
+    expect(screen.getAllByRole("contentinfo")).toHaveLength(1);
+  });
+
+  it("puts it below all three Acts", () => {
+    // The page has to end deliberately rather than trail off the bottom of Act
+    // 3, which means after the Acts and outside them.
+    render(<Home />);
+    const footer = screen.getByRole("contentinfo");
+    const main = screen.getByRole("main");
+
+    expect(main.contains(footer)).toBe(false);
+    expect(
+      main.compareDocumentPosition(footer) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+});

@@ -12,6 +12,7 @@
  */
 import { ActSection } from "@/components/act-section";
 import { SceneLayer } from "@/components/scene/scene-layer";
+import { SiteFooter } from "@/components/site-footer";
 import { SiteHeader } from "@/components/site-header";
 
 export default function Home() {
@@ -71,6 +72,8 @@ export default function Home() {
           </p>
         </ActSection>
       </main>
+
+      <SiteFooter />
     </>
   );
 }

@@ -6,6 +6,7 @@ import { Canvas } from "@react-three/fiber";
 import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useActInView } from "@/hooks/use-act-in-view";
 import { usePointerNdc } from "@/hooks/use-pointer-ndc";
+import { useOccludedBottom } from "@/hooks/use-occluded-bottom";
 
 import { HotspotLayer } from "@/components/hud/hotspot-layer";
 import {
@@ -35,6 +36,7 @@ export function SceneLayer() {
   const progressRef = useScrollSpine(!reducedMotion);
   const actInView = useActInView(reducedMotion);
   const pointerRef = usePointerNdc();
+  const occludedBottomRef = useOccludedBottom();
 
   /*
    * One channel per interactive set, created here because this is the one place
@@ -66,6 +68,7 @@ export function SceneLayer() {
               reducedMotion={reducedMotion}
               actInView={actInView}
               pointerRef={pointerRef}
+              occludedBottomRef={occludedBottomRef}
               channels={channels}
             />
           </React.Suspense>

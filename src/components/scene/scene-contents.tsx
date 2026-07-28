@@ -31,6 +31,8 @@ interface SceneContentsProps {
   actInView: Act;
   /** Live pointer position, for the Gunsmith View's parallax. */
   pointerRef: React.RefObject<PointerNdc>;
+  /** How much of the viewport's bottom edge the footer has covered. */
+  occludedBottomRef: React.RefObject<number>;
   channels: {
     parts: HotspotChannel<PartName>;
     gear: HotspotChannel<GearName>;
@@ -78,6 +80,7 @@ export function SceneContents({
   reducedMotion,
   actInView,
   pointerRef,
+  occludedBottomRef,
   channels,
 }: SceneContentsProps) {
   const { scene, parts } = useHeroRifle();
@@ -93,6 +96,8 @@ export function SceneContents({
     showcase: SHOWCASE_AT_REST,
     /** Gear Items that have had at least one frame, so may be eased. */
     settled: new Set<GearName>(),
+    /** The viewport the HUD is placed into, rewritten each frame. */
+    frame: { width: 0, height: 0, occludedBottom: 0 },
   });
 
   useFrame(({ camera, size }, delta) => {
@@ -201,8 +206,15 @@ export function SceneContents({
     camera.updateMatrixWorld();
     channels.parts.setAvailable(state.interaction.parts);
     channels.gear.setAvailable(state.interaction.gear);
-    projectHotspots(channels.parts, parts, camera, size, scratch.current.anchor);
-    projectHotspots(channels.gear, items, camera, size, scratch.current.anchor);
+    // The frame the HUD gets is the frame the visitor can see: the footer rides
+    // up over the fixed canvas at the end of the page, and anything it has
+    // reached is behind an opaque surface.
+    const frame = scratch.current.frame;
+    frame.width = size.width;
+    frame.height = size.height;
+    frame.occludedBottom = occludedBottomRef.current;
+    projectHotspots(channels.parts, parts, camera, frame, scratch.current.anchor);
+    projectHotspots(channels.gear, items, camera, frame, scratch.current.anchor);
   });
 
   return (

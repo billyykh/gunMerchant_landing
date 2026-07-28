@@ -251,6 +251,15 @@
     letter-spacing: -0.04em;
   }
 
+  /* The wordmark at UI size — header and footer. Carries the tracking rather
+   * than leaving each placement to remember it: -0.04em is a property of the
+   * mark, not a local choice. Size is set where it is used. */
+  .brand-mark {
+    font-family: var(--font-heading);
+    font-weight: 700;
+    letter-spacing: -0.04em;
+  }
+
   /* Corner brackets — L-shaped rules only, never a closed frame. */
   .hud-brackets {
     position: relative;
