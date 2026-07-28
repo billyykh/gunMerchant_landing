@@ -15,6 +15,25 @@ if (!globalThis.ResizeObserver) {
   };
 }
 
+/*
+ * Also absent, and reached for by anything that asks what is on screen — the
+ * reduced-motion Act selector and the page-close watcher. A no-op stub lets
+ * them mount; tests that care about the answer install their own.
+ */
+if (!globalThis.IntersectionObserver) {
+  globalThis.IntersectionObserver = class IntersectionObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+    takeRecords() {
+      return [];
+    }
+    root = null;
+    rootMargin = "";
+    thresholds = [] as readonly number[];
+  } as unknown as typeof globalThis.IntersectionObserver;
+}
+
 if (!Element.prototype.scrollIntoView) {
   Element.prototype.scrollIntoView = function scrollIntoView() {};
 }

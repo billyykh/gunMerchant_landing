@@ -5,10 +5,14 @@ import * as React from "react";
 import { Callout } from "@/components/hud/callout";
 import { DetailPanel } from "@/components/hud/detail-panel";
 import type { HotspotChannel } from "@/components/scene/hotspot-channel";
+import { useIsCompact } from "@/hooks/use-media-query";
+import { usePageCloseInView } from "@/hooks/use-occluded-bottom";
 import { findCatalogEntry, type CatalogId } from "@/lib/catalog";
 
 interface HotspotLayerProps<T extends CatalogId> {
   channel: HotspotChannel<T>;
+  /** Names the list this layer becomes on a narrow viewport. */
+  label: string;
   /**
    * What this layer offers, in tab order — which is also the Detail Panel
    * trigger order §8 asks for. See `src/lib/hotspots.ts`.
@@ -62,9 +66,18 @@ const openId = <T extends CatalogId>(showing: Showing<T> | null) =>
  */
 export function HotspotLayer<T extends CatalogId>({
   channel,
+  label,
   ids,
   indexLabel,
 }: HotspotLayerProps<T>) {
+  const compact = useIsCompact();
+  /*
+   * The list is fixed to the bottom of the window, which is where the footer
+   * arrives. Left up it puts the Lineup's chips over the footer's own links
+   * while the objects they name are behind that same opaque surface — the
+   * defect ticket 15 fixed for the projected hotspots, from the other side.
+   */
+  const closing = usePageCloseInView();
   const available = React.useSyncExternalStore(
     channel.subscribe,
     channel.getAvailable,
@@ -121,6 +134,14 @@ export function HotspotLayer<T extends CatalogId>({
    */
   const finalFocus = React.useRef<HTMLElement | null>(null);
 
+  const open = (id: T, from: HTMLElement) => {
+    finalFocus.current = from;
+    setPanel({ id, open: true });
+    // The panel is the lit element from here; a Callout still showing behind
+    // it is the second one §4 forbids.
+    setCallout(dismiss);
+  };
+
   return (
     <>
       {/*
@@ -128,8 +149,18 @@ export function HotspotLayer<T extends CatalogId>({
        * covers the scene, and a transparent sheet that swallowed clicks would
        * make the whole page feel dead.
        */}
+      {available && compact && !closing ? (
+        <HotspotList
+          label={label}
+          ids={ids}
+          indexLabel={indexLabel}
+          onOpen={open}
+        />
+      ) : null}
+
       <div className="pointer-events-none fixed inset-0 z-30">
         {available &&
+          !compact &&
           ids.map((id) => {
             const entry = findCatalogEntry(id);
             if (!entry) return null;
@@ -170,13 +201,7 @@ export function HotspotLayer<T extends CatalogId>({
                   onPointerLeave={() => setCallout(dismiss)}
                   onFocus={(event) => show(event.currentTarget.parentElement)}
                   onBlur={() => setCallout(dismiss)}
-                  onClick={(event) => {
-                    finalFocus.current = event.currentTarget;
-                    setPanel({ id, open: true });
-                    // The panel is the lit element from here; a Callout still
-                    // showing behind it is the second one §4 forbids.
-                    setCallout(dismiss);
-                  }}
+                  onClick={(event) => open(id, event.currentTarget)}
                 >
                   {/*
                    * The dot the Callout's leader line meets. It is the only
@@ -213,5 +238,81 @@ export function HotspotLayer<T extends CatalogId>({
         finalFocus={finalFocus}
       />
     </>
+  );
+}
+
+/**
+ * The same catalog, offered as a list.
+ *
+ * Below `sm` the projected overlay stops working, and not for a reason that can
+ * be tuned away: the composition scales with the frame while the 44px touch
+ * floor does not. Measured at 375×812, the eight Parts project into a 230px
+ * span with the closest pair of anchors 9px apart — the receiver's target
+ * almost entirely covering the magazine's, so a finger cannot choose between
+ * them and whichever is later in the DOM wins.
+ *
+ * So the model stays the picture and the list becomes the way in. Same order,
+ * same names, same Detail Panel; §9 downscales rendering, never content. No
+ * Callout, because a leader line from a chip at the bottom of the screen to a
+ * Part it is not beside is an arrow to nowhere — the chip already says what it
+ * is.
+ *
+ * Nothing here registers with the channel. There is no anchor to track, and an
+ * unregistered id is one the canvas simply skips.
+ */
+function HotspotList<T extends CatalogId>({
+  label,
+  ids,
+  indexLabel,
+  onOpen,
+}: {
+  label: string;
+  ids: readonly T[];
+  indexLabel?: (id: T) => string;
+  onOpen: (id: T, from: HTMLElement) => void;
+}) {
+  return (
+    <nav
+      aria-label={label}
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-[var(--border-structural)] bg-surface-0/85 backdrop-blur-[12px]"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      {/*
+       * Scrolls sideways rather than wrapping to three rows: the list sits over
+       * Act 2's own heading, and a block tall enough to bury it would hide the
+       * thing it is a list of.
+       */}
+      <ul className="flex snap-x gap-2 overflow-x-auto px-4 py-2">
+        {ids.map((id) => {
+          const entry = findCatalogEntry(id);
+          if (!entry) return null;
+
+          return (
+            <li key={id} className="snap-start">
+              <button
+                type="button"
+                aria-label={entry.name}
+                aria-haspopup="dialog"
+                onClick={(event) => onOpen(id, event.currentTarget)}
+                className={
+                  "flex min-h-11 items-center gap-2 rounded-md border border-white/[0.14] px-3 " +
+                  "text-sm whitespace-nowrap text-text-primary " +
+                  "transition-colors duration-[var(--dur-fast)] hover:bg-white/[0.06]"
+                }
+              >
+                {indexLabel ? (
+                  // Orange, not red: this is `hud` type well below 24px, where
+                  // #DC2626 measures 4.21:1 and fails (§2.2).
+                  <span className="hud-label" aria-hidden="true">
+                    {indexLabel(id)}
+                  </span>
+                ) : null}
+                {entry.name}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </nav>
   );
 }

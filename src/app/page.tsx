@@ -37,7 +37,11 @@ export default function Home() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3" aria-hidden="true">
+          {/* Hidden under reduced motion: nothing assembles on that path, and
+              a hint promising an animation that will not play is a caption for
+              a different page. Done in CSS so this stays a server component —
+              the preference is the browser's to answer. */}
+          <div className="scroll-hint flex items-center gap-3" aria-hidden="true">
             <span
               className="h-px w-16"
               style={{ background: "var(--gradient-thermal)" }}

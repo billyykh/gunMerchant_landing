@@ -72,7 +72,8 @@ function CommandInput({
 }: React.ComponentProps<typeof CommandPrimitive.Input>) {
   return (
     <div data-slot="command-input-wrapper" className="p-1 pb-0">
-      <InputGroup className="h-8! rounded-md border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2!">
+      {/* 44px on touch, shadcn's 32px from `sm` up (MASTER.md §8). */}
+      <InputGroup className="h-11! rounded-md border-input/30 bg-input/30 shadow-none! *:data-[slot=input-group-addon]:pl-2! sm:h-8!">
         <CommandPrimitive.Input
           data-slot="command-input"
           className={cn(

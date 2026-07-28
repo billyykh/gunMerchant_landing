@@ -65,7 +65,9 @@ export function SiteHeader() {
       <div className="flex h-16 items-center gap-6 px-6 sm:px-12 lg:px-16">
         <Link
           href="/"
-          className="brand-mark text-lg text-text-primary"
+          // 44px tall like every other target (§8). The bar is 64px, so the
+          // box fits inside it without moving the wordmark.
+          className="brand-mark inline-flex min-h-11 items-center text-lg text-text-primary"
         >
           VANTAK
         </Link>
@@ -97,7 +99,13 @@ function NavLink({ label, href }: { label: string; href: string }) {
   return (
     <Link
       href={href}
-      className="text-sm font-medium text-text-secondary transition-colors duration-[var(--dur-fast)] hover:text-thermal-4"
+      /*
+       * The inline nav is hidden below `md`, but `md` starts at 768px and a
+       * tablet in portrait is 768px — these are touch targets, and a 35×18
+       * link is not one (§8). The row's `gap-6` is well past the 8px floor, so
+       * the wider boxes cost nothing.
+       */
+      className="inline-flex min-h-11 min-w-11 items-center justify-center text-sm font-medium text-text-secondary transition-colors duration-[var(--dur-fast)] hover:text-thermal-4"
     >
       {label}
     </Link>

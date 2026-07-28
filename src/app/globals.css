@@ -393,6 +393,12 @@
     scroll-behavior: auto !important;
   }
 
+  /* "Scroll to assemble" describes the scrub, which this path does not run.
+   * The Acts are still scrolled through; nothing assembles while you do it. */
+  .scroll-hint {
+    display: none;
+  }
+
   /* §6.3 asks for a --dur-fast cross-fade here rather than a cut: the Callout
    * is the feedback that a hover registered, and a hard swap reads as a
    * flicker. It transforms no distance, so nothing above is being undone —

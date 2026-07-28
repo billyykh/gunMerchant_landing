@@ -9,6 +9,7 @@ import {
   advanceShowcase,
   deriveGearPresentation,
 } from "@/lib/gear-presentation";
+import { fitFraming } from "@/lib/camera-framing";
 import { parallaxOffset, type PointerNdc } from "@/lib/parallax";
 import {
   GEAR_NAMES,
@@ -86,6 +87,7 @@ export function SceneContents({
   const { scene, parts } = useHeroRifle();
   const { items } = useLineupGear();
   const rifleRef = React.useRef<Group>(null);
+  const lineupRef = React.useRef<Group>(null);
 
   // Scratch allocated once. Everything below runs every frame, and a fresh
   // Vector3 per object per frame is hundreds of allocations a second for the
@@ -98,6 +100,9 @@ export function SceneContents({
     settled: new Set<GearName>(),
     /** The viewport the HUD is placed into, rewritten each frame. */
     frame: { width: 0, height: 0, occludedBottom: 0 },
+    /** Working vectors for the framing dolly. */
+    eye: new Vector3(),
+    focus: new Vector3(),
   });
 
   useFrame(({ camera, size }, delta) => {
@@ -160,6 +165,18 @@ export function SceneContents({
     const settled = scratch.current.settled;
     const lift = 1 - Math.exp(-delta / GEAR_FLOAT_TIME_CONSTANT);
 
+    /*
+     * The Lineup is in shot from the moment the rifle starts falling toward it.
+     *
+     * Ticket 14 left the Gear Items always rendered, on the grounds that they
+     * sit far outside the Act 1 and 2 framings. Responsive framing ends that:
+     * a portrait viewport pulls the camera back far enough to hold the
+     * composition's width, and the row walks into the bottom of the Act 1
+     * frame. Gating on the drop also saves a phone four draw calls and ~46k
+     * triangles for two thirds of the page.
+     */
+    if (lineupRef.current) lineupRef.current.visible = state.dropProgress > 0;
+
     for (const [name, item] of items) {
       const [x, y, z] = gear[name].position;
       // A Gear Item's first frame is a placement, not a float: eased from
@@ -172,12 +189,30 @@ export function SceneContents({
       settled.add(name);
     }
 
+    /*
+     * The authored pose, fitted to the window it is actually being shown in.
+     *
+     * A perspective camera fixes its vertical field of view, so a narrow
+     * viewport does not show less top and bottom — it shows less left and
+     * right, and every composition here is wide. `fitFraming` widens the field
+     * of view to hold the reference width, and pulls the camera back along its
+     * own view direction for whatever the widening could not reach.
+     */
     const { position, target, fov } = state.camera;
+    const framing = fitFraming(fov, size.width / size.height);
+
     camera.position.set(...position);
+    if (framing.dolly !== 1) {
+      const eye = scratch.current.eye.fromArray(position);
+      const focus = scratch.current.focus.fromArray(target);
+      camera.position.copy(
+        focus.addScaledVector(eye.sub(focus), framing.dolly)
+      );
+    }
     camera.lookAt(...target);
 
-    if ("fov" in camera && camera.fov !== fov) {
-      camera.fov = fov;
+    if ("fov" in camera && camera.fov !== framing.fov) {
+      camera.fov = framing.fov;
       camera.updateProjectionMatrix();
     }
 
@@ -223,10 +258,14 @@ export function SceneContents({
         <primitive object={scene} />
       </group>
 
-      {GEAR_NAMES.map((name) => {
-        const item = items.get(name);
-        return item ? <primitive key={name} object={item.object} /> : null;
-      })}
+      {/* Grouped so the whole row can be taken out of shot at once — see the
+          `staged` flag in the frame loop. */}
+      <group ref={lineupRef}>
+        {GEAR_NAMES.map((name) => {
+          const item = items.get(name);
+          return item ? <primitive key={name} object={item.object} /> : null;
+        })}
+      </group>
     </>
   );
 }

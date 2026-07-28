@@ -5,6 +5,36 @@ import * as React from "react";
 import { PAGE_CLOSE_ATTRIBUTE } from "@/lib/page-close";
 
 /**
+ * Whether the page's closing surface has come into view.
+ *
+ * The compact breakpoint's hotspot list is a bar fixed to the bottom of the
+ * window, and the footer arrives underneath it — leaving it up puts the Lineup's
+ * chips over the footer's own links while the objects they name are behind an
+ * opaque surface. `useOccludedBottom` answers the same question for the canvas,
+ * but per frame and as a ref; this is the reactive form the DOM needs.
+ */
+export function usePageCloseInView(): boolean {
+  const [inView, setInView] = React.useState(false);
+
+  React.useEffect(() => {
+    const close = document.querySelector(`[${PAGE_CLOSE_ATTRIBUTE}]`);
+    if (!close) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      // Any part of it at all: once the page has started closing, the scene
+      // behind it is not what the visitor is looking at any more.
+      { threshold: 0 }
+    );
+
+    observer.observe(close);
+    return () => observer.disconnect();
+  }, []);
+
+  return inView;
+}
+
+/**
  * How many pixels of the viewport's bottom edge the page's closing surface has
  * covered.
  *

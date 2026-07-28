@@ -1,6 +1,8 @@
 import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import { asPhone } from "@/test-utils/viewport";
 
 import {
   createHotspotChannel,
@@ -30,6 +32,7 @@ const renderParts = () =>
   render(
     <HotspotLayer
       channel={channel}
+      label="Parts"
       ids={PART_HOTSPOT_ORDER}
       indexLabel={(id) => partHotspotIndexLabel(id as PartName)}
     />
@@ -37,7 +40,9 @@ const renderParts = () =>
 
 /** The Lineup's layer — the same component, an unnumbered set. */
 const renderGear = () =>
-  render(<HotspotLayer channel={channel} ids={GEAR_HOTSPOT_ORDER} />);
+  render(
+    <HotspotLayer channel={channel} label="Lineup" ids={GEAR_HOTSPOT_ORDER} />
+  );
 
 /** The canvas turns interaction on when its Act settles. */
 const settle = () => act(() => channel.setAvailable(true));
@@ -51,6 +56,93 @@ const shownCallout = () =>
 
 beforeEach(() => {
   channel = createHotspotChannel();
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+describe("on a viewport too narrow to point at the model", () => {
+  /*
+   * Eight anchors along a rifle that spans 230px cannot be 44px apart with 8px
+   * between them — measured in the browser at 375×812, the closest pair of
+   * projected hotspots sat 9px apart, so the receiver's target almost entirely
+   * covered the magazine's. That is geometry, not a bug to tune away: the
+   * composition scales with the frame and the 44px floor does not.
+   *
+   * So the base breakpoint offers the same catalog as a list. Every Part is
+   * still reachable and still opens the same Detail Panel — §9 downscales
+   * rendering, never content.
+   */
+  const listed = () =>
+    within(screen.getByRole("navigation", { name: /parts|lineup/i }))
+      .getAllByRole("button")
+      .map((b) => b.getAttribute("aria-label"));
+
+  it("lists them instead of projecting them onto the scene", () => {
+    asPhone();
+    renderParts();
+    settle();
+
+    expect(listed()).toEqual(PART_HOTSPOT_ORDER.map(nameOf));
+    expect(channel.nodes.size).toBe(0);
+  });
+
+  it("gives every control room for a finger", () => {
+    asPhone();
+    renderParts();
+    settle();
+
+    // jsdom has no layout, so this is the class contract rather than a
+    // measurement: the browser pass is what confirms the pixels.
+    for (const button of screen.getAllByRole("button")) {
+      expect(button.className).toMatch(/min-h-11/);
+    }
+  });
+
+  it("still offers nothing while the scene is moving", () => {
+    asPhone();
+    renderParts();
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+  });
+
+  it("opens the same Detail Panel", async () => {
+    asPhone();
+    const user = userEvent.setup();
+    renderParts();
+    settle();
+
+    await user.click(hotspot("Rifle_Scope"));
+
+    const panel = screen.getByRole("dialog");
+    expect(
+      within(panel).getByRole("heading", { name: SCOPE })
+    ).toBeInTheDocument();
+    expect(within(panel).getByText("$2,310")).toBeInTheDocument();
+  });
+
+  it("shows no Callout, because the list already carries the name", () => {
+    // A leader line pointing from a chip at the bottom of the screen to a Part
+    // it is not next to would be an arrow to nowhere.
+    asPhone();
+    renderParts();
+    settle();
+
+    expect(document.querySelector(".hud-callout")).toBeNull();
+  });
+
+  it("numbers the Parts and leaves the Lineup unnumbered", () => {
+    asPhone();
+    const { unmount } = renderParts();
+    settle();
+    expect(screen.getByRole("navigation")).toHaveTextContent("02/08");
+    unmount();
+
+    channel = createHotspotChannel();
+    renderGear();
+    settle();
+    expect(screen.getByRole("navigation")).not.toHaveTextContent(/\d\d\/\d\d/);
+  });
 });
 
 describe("while the scene is still moving", () => {
@@ -371,6 +463,19 @@ describe("what the canvas is told", () => {
     settle();
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("names the hotspot whose panel is open even when it was opened from the list", async () => {
+    // Act 3's showcase turns whatever is selected, and on a phone that
+    // selection arrives from the list rather than from a point on the model.
+    asPhone();
+    const user = userEvent.setup();
+    renderGear();
+    settle();
+
+    await user.click(hotspot("Gear_Torch"));
+
+    expect(channel.getSelected()).toBe("Gear_Torch");
   });
 
   it("does not leave a Gear Item lifted by a Callout that is closing", async () => {

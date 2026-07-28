@@ -139,7 +139,15 @@ export function DetailPanel({
 
             <button
               type="button"
-              className="flex h-11 items-center justify-center rounded-md bg-thermal-3 px-6 font-medium text-thermal-6 transition-colors duration-[var(--dur-fast)] hover:bg-thermal-4"
+              /*
+               * §7 shifts the primary fill to `--thermal-4` on hover, and the
+               * label has to turn over with it. `--thermal-6` on the resting
+               * red measures 4.59:1 — AA, as §2.2 records — but on the orange
+               * it is 2.67:1, which fails outright, and a control that only
+               * meets the floor until you point at it does not meet it.
+               * `--surface-0` on the same orange is 6.99:1.
+               */
+              className="flex h-11 items-center justify-center rounded-md bg-thermal-3 px-6 font-medium text-thermal-6 transition-colors duration-[var(--dur-fast)] hover:bg-thermal-4 hover:text-surface-0"
             >
               Add to kit
             </button>

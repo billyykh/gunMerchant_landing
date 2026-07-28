@@ -109,7 +109,12 @@ export function CatalogSearch() {
               value={query}
               onValueChange={setQuery}
               placeholder="Search products"
-              className="font-mono"
+              /*
+               * 16px below `sm`. iOS Safari zooms the page in on focus for any
+               * input smaller than that, and §9 forbids taking zoom away — so
+               * the fix is to give it nothing to correct, not to disable it.
+               */
+              className="font-mono text-base sm:text-sm"
             />
 
             <CommandList>
@@ -125,7 +130,8 @@ export function CatalogSearch() {
                         key={entry.id}
                         value={entry.id}
                         onSelect={() => setOpen(false)}
-                        className="justify-between"
+                        // shadcn's row is 32px; these are tap targets (§8).
+                        className="min-h-11 justify-between"
                       >
                         <span>{entry.name}</span>
                         <span className="tabular text-text-muted">

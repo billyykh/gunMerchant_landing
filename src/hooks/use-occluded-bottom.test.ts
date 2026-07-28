@@ -1,8 +1,25 @@
-import { renderHook } from "@testing-library/react";
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { PAGE_CLOSE_ATTRIBUTE } from "@/lib/page-close";
-import { useOccludedBottom } from "./use-occluded-bottom";
+import { useOccludedBottom, usePageCloseInView } from "./use-occluded-bottom";
+
+/** jsdom ships no IntersectionObserver; this one is driven by hand. */
+function stubIntersectionObserver() {
+  const instances: Array<(entries: { isIntersecting: boolean }[]) => void> = [];
+  vi.stubGlobal(
+    "IntersectionObserver",
+    class {
+      constructor(cb: (entries: { isIntersecting: boolean }[]) => void) {
+        instances.push(cb);
+      }
+      observe() {}
+      disconnect() {}
+      unobserve() {}
+    }
+  );
+  return instances;
+}
 
 /**
  * jsdom has no layout, so the page's closing surface is placed by hand: the
@@ -20,6 +37,35 @@ const scroll = () => window.dispatchEvent(new Event("scroll"));
 
 afterEach(() => {
   document.body.innerHTML = "";
+  vi.unstubAllGlobals();
+});
+
+describe("whether the page has started closing", () => {
+  it("says no while the closing surface is still below the fold", () => {
+    stubIntersectionObserver();
+    placeFooter(window.innerHeight + 500);
+
+    expect(renderHook(() => usePageCloseInView()).result.current).toBe(false);
+  });
+
+  it("says yes as soon as any of it is showing", () => {
+    // The compact hotspot list is fixed to the bottom of the window, which is
+    // exactly where the footer arrives.
+    const observers = stubIntersectionObserver();
+    placeFooter(window.innerHeight - 10);
+    const { result } = renderHook(() => usePageCloseInView());
+
+    act(() => observers[0]([{ isIntersecting: true }]));
+    expect(result.current).toBe(true);
+
+    act(() => observers[0]([{ isIntersecting: false }]));
+    expect(result.current).toBe(false);
+  });
+
+  it("says no when there is no closing surface", () => {
+    stubIntersectionObserver();
+    expect(renderHook(() => usePageCloseInView()).result.current).toBe(false);
+  });
 });
 
 describe("how much of the viewport the page has covered", () => {

@@ -7,6 +7,8 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useActInView } from "@/hooks/use-act-in-view";
 import { usePointerNdc } from "@/hooks/use-pointer-ndc";
 import { useOccludedBottom } from "@/hooks/use-occluded-bottom";
+import { useIsCompact } from "@/hooks/use-media-query";
+import { SCENE_LIGHTS } from "@/lib/scene-palette";
 
 import { HotspotLayer } from "@/components/hud/hotspot-layer";
 import {
@@ -37,6 +39,7 @@ export function SceneLayer() {
   const actInView = useActInView(reducedMotion);
   const pointerRef = usePointerNdc();
   const occludedBottomRef = useOccludedBottom();
+  const compact = useIsCompact();
 
   /*
    * One channel per interactive set, created here because this is the one place
@@ -57,10 +60,15 @@ export function SceneLayer() {
           // The Act 1 keyframe from Scene State, so the first painted frame is
           // already the pose `useFrame` is about to set.
           camera={{ position: [0.726, 0.73, -0.538], fov: 26, near: 0.1, far: 100 }}
-          dpr={[1, 2]}
-          gl={{ antialias: true }}
+          // MASTER.md §9: the base breakpoint caps the pixel ratio at 1.5.
+          // A phone's 3x display asks for nine times the fragments of a 1x one
+          // to render the same picture, which is the single biggest cost on a
+          // device with the least to spend. Antialiasing goes with it — at
+          // this pixel density the edges it smooths are sub-pixel anyway.
+          dpr={compact ? [1, 1.5] : [1, 2]}
+          gl={{ antialias: !compact }}
         >
-          <SceneLighting />
+          <SceneLighting compact={compact} />
 
           <React.Suspense fallback={null}>
             <SceneContents
@@ -82,6 +90,7 @@ export function SceneLayer() {
        */}
       <HotspotLayer
         channel={channels.parts}
+        label="Parts"
         ids={PART_HOTSPOT_ORDER}
         indexLabel={partHotspotIndexLabel}
       />
@@ -89,7 +98,11 @@ export function SceneLayer() {
        * No index on the Lineup: four objects a visitor looks across, not a
        * sequence they count through (see `lib/hotspots.ts`).
        */}
-      <HotspotLayer channel={channels.gear} ids={GEAR_HOTSPOT_ORDER} />
+      <HotspotLayer
+        channel={channels.gear}
+        label="Lineup"
+        ids={GEAR_HOTSPOT_ORDER}
+      />
 
       <LoadingReadout />
     </>
@@ -112,15 +125,46 @@ export function SceneLayer() {
  * the side the red would otherwise wash.
  *
  * Cool fill from below so the underside does not go solid black.
+ *
+ * Halved on the base breakpoint (§9). Both white keys stay, because dropping
+ * either leaves the Act on that side of the scene a silhouette — that is
+ * content, and §9 downscales rendering, never content. What goes is the red rim
+ * and the underside fill: the rim is an accent on the profile rather than
+ * anything you read the shape by, and the fill only lifts a face that is
+ * already pointing away. Ambient takes up the fill's slack.
+ *
+ * Colours resolve through `SCENE_LIGHTS`, which is checked against the ramp in
+ * `globals.css` by its own test — three.js cannot read a CSS custom property,
+ * so the alternative is four hex literals nobody maintains (§10).
  */
-function SceneLighting() {
+function SceneLighting({ compact }: { compact: boolean }) {
   return (
     <>
-      <ambientLight intensity={1.1} />
-      <directionalLight position={[-4, 5, 4]} intensity={5} color="#fff7ed" />
-      <directionalLight position={[2, 4, -4]} intensity={3.2} color="#fff7ed" />
-      <directionalLight position={[5, 1, -3]} intensity={2} color="#dc2626" />
-      <directionalLight position={[0, -3, 2]} intensity={1.4} color="#7f8fa6" />
+      <ambientLight intensity={compact ? 1.5 : 1.1} />
+      <directionalLight
+        position={[-4, 5, 4]}
+        intensity={5}
+        color={SCENE_LIGHTS.key}
+      />
+      <directionalLight
+        position={[2, 4, -4]}
+        intensity={3.2}
+        color={SCENE_LIGHTS.key}
+      />
+      {!compact && (
+        <>
+          <directionalLight
+            position={[5, 1, -3]}
+            intensity={2}
+            color={SCENE_LIGHTS.rim}
+          />
+          <directionalLight
+            position={[0, -3, 2]}
+            intensity={1.4}
+            color={SCENE_LIGHTS.fill}
+          />
+        </>
+      )}
     </>
   );
 }

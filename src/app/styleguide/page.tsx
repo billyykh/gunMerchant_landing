@@ -218,7 +218,9 @@ export default function StyleGuide() {
         <div className="flex flex-wrap items-center gap-4">
           <button
             type="button"
-            className="min-h-11 rounded-md bg-thermal-3 px-5 font-medium text-thermal-6 transition-colors hover:bg-thermal-4"
+            // The label turns over with the fill — `--thermal-6` on
+            // `--thermal-4` is 2.67:1 (§2.2). See `detail-panel.tsx`.
+            className="min-h-11 rounded-md bg-thermal-3 px-5 font-medium text-thermal-6 transition-colors hover:bg-thermal-4 hover:text-surface-0"
             style={{ transitionDuration: "var(--dur-fast)" }}
           >
             Add to loadout
