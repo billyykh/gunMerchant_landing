@@ -107,6 +107,30 @@ These cost real time to find; anyone re-running the normalisation needs them.
   the receiver (e.g. the bolt's origin at the bolt-face seat, the scope's origin
   at its rail clamp), NOT the bounding-box center. This keeps Assembly
   interpolation and any per-Part rotation readable.
+- **Each Gear Item's origin sits at its base**, on the object's own vertical
+  axis — these are props that stand on a surface, and the Lineup arranges them
+  on a shared floor. A shared `y` is then a shared floor rather than a
+  coincidence, and the showcase rotation turns an object on the spot instead of
+  swinging it around a point in mid-air.
+
+## Measured sizes
+
+Bounding size of each contract export, in metres, from the GLB accessor bounds.
+**The Act 3 Lineup arrangement is authored against these numbers**
+(`src/lib/scene-state.ts`), so re-exporting an asset at a different size moves
+the composition. Re-measure and update this table if you do.
+
+| Export                   | W × H × D (m)         | Note                        |
+| ------------------------ | --------------------- | --------------------------- |
+| `hero-rifle.glb`         | 1.16 × 0.19 × 0.11    | overall length, per spec    |
+| `thermal-drone.glb`      | 0.45 × 0.19 × 0.33    | widest Gear Item            |
+| `ammo-box.glb`           | 0.36 × 0.36 × 0.42    | measured open               |
+| `night-vision-scope.glb` | 0.26 × 0.14 × 0.13    |                             |
+| `torch.glb`              | 0.13 × 0.03 × 0.03    | smallest — 9× shorter than the rifle |
+
+The nine-to-one spread between the rifle and the torch is real and is not to be
+corrected in code: the Lineup composes around it with depth and framing (see the
+`LINEUP_ARRANGEMENT` comment), never by scaling a model away from its true size.
 
 ## Hero Rifle — `hero-rifle.glb`
 

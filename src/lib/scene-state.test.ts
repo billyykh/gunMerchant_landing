@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   GEAR_NAMES,
+  LINEUP_FOOTPRINT_RADIUS,
   PART_NAMES,
   SCROLL_WINDOWS,
   type SceneState,
@@ -184,14 +185,41 @@ describe("the Lineup", () => {
     );
   });
 
-  it("gives every Gear Item its own place — nothing is stacked on anything else", () => {
-    const { gear, heroRifle } = deriveSceneState(1);
-    const placed = [heroRifle.position, ...GEAR_NAMES.map((n) => gear[n].position)];
+  it("stands every Gear Item on its own patch of floor", () => {
+    // Checked against the objects' measured footprints rather than a round
+    // number: the drone is 0.45 across and the torch 0.13, so one clearance
+    // that suits both says nothing about either. Positions are each item's
+    // base, so a plan-view distance against summed radii is exactly the
+    // question — do these two overlap on the floor?
+    const { gear } = deriveSceneState(1);
+    const onFloor = ([x, , z]: Vec3) => Math.hypot(x, z);
 
-    for (let i = 0; i < placed.length; i++) {
-      for (let j = i + 1; j < placed.length; j++) {
-        expect(distanceBetween(placed[i], placed[j])).toBeGreaterThan(0.5);
+    for (const a of GEAR_NAMES) {
+      for (const b of GEAR_NAMES) {
+        if (a >= b) continue;
+
+        const apart = onFloor([
+          gear[a].position[0] - gear[b].position[0],
+          0,
+          gear[a].position[2] - gear[b].position[2],
+        ]);
+
+        expect(apart).toBeGreaterThan(
+          LINEUP_FOOTPRINT_RADIUS[a] + LINEUP_FOOTPRINT_RADIUS[b]
+        );
       }
+    }
+  });
+
+  it("lands the Hero Rifle above the Gear Items, not among them", () => {
+    // The rifle is 1.16 long and spans the whole row, so it is the one object
+    // that cannot be given its own patch of floor. It is separated in height
+    // instead — it is the protagonist, and the gear is what it goes to the
+    // field with.
+    const { gear, heroRifle } = deriveSceneState(1);
+
+    for (const name of GEAR_NAMES) {
+      expect(heroRifle.position[1]).toBeGreaterThan(gear[name].position[1]);
     }
   });
 

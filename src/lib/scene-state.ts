@@ -141,17 +141,64 @@ const EXPLODED_OFFSETS: Record<PartName, Transform> = {
  * composition reads as a deliberate lineup rather than as five objects that
  * each decided where to stand.
  *
- * The thermal drone sits highest — it is the one object that flies.
+ * **Authored against the models' measured sizes** (`src/assets/ASSETS.md`,
+ * "Measured sizes"), which are metric and small: the rifle is 1.16 long, but
+ * the ammo box is 0.36 across, the drone 0.45, the night-vision scope 0.26 and
+ * the torch 0.13. An arrangement spaced for objects the size of the rifle
+ * leaves the small ones as specks either side of it.
+ *
+ * The three ground items stand on the floor — every Gear Item's origin sits at
+ * its base (ASSETS.md, origin conventions), so their shared height is a shared
+ * floor rather than a coincidence —
+ * and are ordered large to small left to right, which gives the row a direction
+ * instead of a jumble. The drone is off that floor and set back: it is the one
+ * object that flies, and standing it beside a box would be the one wrong note in
+ * the group.
+ *
+ * They step *slightly* toward the camera as they get smaller, which is the only
+ * honest lever on a nine-to-one size range: the torch is nearest the lens and
+ * reads larger than it would beside the box, with nothing scaled and no
+ * proportion misreported. Slightly, because the camera looks down — depth on a
+ * downward-tilted view moves an object down the frame as well as forward, and a
+ * bigger step turned the row into a diagonal cascade rather than a lineup.
+ *
+ * The rifle lands *above* the row and the camera drops to meet it, so the Act 2
+ * → 3 move still reads as a fall: it ends lower than it began, and lower than
+ * the frame it left.
+ *
+ * The whole group is held clear of the right-hand third of the frame, because
+ * that is where the Detail Panel comes in. A Gear Item behind the panel that
+ * describes it is a showcase rotating where nobody can see it — the one thing
+ * this Act is for. The two layers are composed against each other, not
+ * separately.
  */
 const LINEUP_ARRANGEMENT = {
-  heroRifle: { position: [0, -1.4, 0], rotation: [0, -0.35, 0.06] },
+  heroRifle: { position: [-0.25, -0.52, -0.25], rotation: [0, -0.35, 0.06] },
   gear: {
-    Gear_AmmoBox: { position: [-2.2, -1.55, 0.3], rotation: [0, 0.4, 0] },
-    Gear_ThermalDrone: { position: [-1.05, -0.85, -0.45], rotation: [0, -0.2, 0] },
-    Gear_Torch: { position: [1.25, -1.6, 0.35], rotation: [0, 0.55, 0] },
-    Gear_NightVisionScope: { position: [2.15, -1.5, -0.1], rotation: [0, -0.5, 0] },
+    Gear_ThermalDrone: { position: [-0.77, -0.78, -0.38], rotation: [0, 0.3, 0] },
+    Gear_AmmoBox: { position: [-0.37, -1.16, -0.08], rotation: [0, 0.4, 0] },
+    Gear_NightVisionScope: { position: [0.07, -1.14, 0.02], rotation: [0, -0.45, 0] },
+    Gear_Torch: { position: [0.4, -1.12, 0.16], rotation: [0, 0.55, 0] },
   },
 } as const satisfies { heroRifle: Transform; gear: Record<GearName, Transform> };
+
+/**
+ * How much floor each object takes up — half its largest horizontal extent,
+ * from the measured sizes recorded in `src/assets/ASSETS.md`.
+ *
+ * Restated here so the arrangement can be checked for what actually matters —
+ * that no two objects stand in the same place — rather than against a round
+ * clearance that happens to hold today. "Spread the Gear Items out" means
+ * nothing until you know the drone is three and a half times the width of the
+ * torch. ASSETS.md remains the source; if these disagree with it, it wins.
+ */
+export const LINEUP_FOOTPRINT_RADIUS = {
+  heroRifle: 0.58,
+  Gear_ThermalDrone: 0.225,
+  Gear_AmmoBox: 0.21,
+  Gear_NightVisionScope: 0.13,
+  Gear_Torch: 0.065,
+} as const satisfies Record<GearName | "heroRifle", number>;
 
 export interface CameraPose {
   position: Vec3;
@@ -197,8 +244,18 @@ const CAMERA_POSES: Record<Act, CameraPose> = {
    * moving the target alone would swing the camera and change the angle.
    */
   gunsmith: { position: [0.864, 0.216, 1.044], target: [0.134, 0.125, -0.087], fov: 30 },
-  /** Act 3: raised and pulled back to hold all five objects. */
-  lineup: { position: [0, 1.2, 6.5], target: [0, -1.4, 0], fov: 40 },
+  /**
+   * Act 3: dropped and pulled back to hold all five objects.
+   *
+   * The arrangement is about 1.5 wide and 0.7 tall at real scale, so this sits
+   * ~1.85 out — far enough that a 40° vertical field frames it with margin and
+   * leaves the right-hand third free for the Detail Panel, close enough that
+   * the 0.13 torch is still an object rather than a mark.
+   *
+   * Slightly above the rifle and looking down at the row, so the Gear Items are
+   * seen standing on their baseline rather than edge-on.
+   */
+  lineup: { position: [0, -0.45, 1.75], target: [-0.05, -0.82, -0.05], fov: 40 },
 };
 
 /**

@@ -7,10 +7,17 @@ import { usePrefersReducedMotion } from "@/hooks/use-prefers-reduced-motion";
 import { useActInView } from "@/hooks/use-act-in-view";
 import { usePointerNdc } from "@/hooks/use-pointer-ndc";
 
-import { GunsmithHud } from "./gunsmith-hud";
-import { HeroRifle } from "./hero-rifle";
+import { HotspotLayer } from "@/components/hud/hotspot-layer";
+import {
+  GEAR_HOTSPOT_ORDER,
+  PART_HOTSPOT_ORDER,
+  partHotspotIndexLabel,
+} from "@/lib/hotspots";
+import type { GearName, PartName } from "@/lib/scene-state";
+
 import { createHotspotChannel } from "./hotspot-channel";
 import { LoadingReadout } from "./loading-readout";
+import { SceneContents } from "./scene-contents";
 import { useScrollSpine } from "./use-scroll-spine";
 
 /**
@@ -29,9 +36,17 @@ export function SceneLayer() {
   const actInView = useActInView(reducedMotion);
   const pointerRef = usePointerNdc();
 
-  // One channel per mounted scene, created here because it is the one place
-  // that holds both ends of it: the canvas that writes and the HUD that reads.
-  const [channel] = React.useState(createHotspotChannel);
+  /*
+   * One channel per interactive set, created here because this is the one place
+   * that holds both ends of them: the canvas that writes and the HUD layers
+   * that read. Two rather than one, because the two sets are available in
+   * different Acts — a single channel would have to carry two availabilities,
+   * and the layers would each have to work out which was theirs.
+   */
+  const [channels] = React.useState(() => ({
+    parts: createHotspotChannel<PartName>(),
+    gear: createHotspotChannel<GearName>(),
+  }));
 
   return (
     <>
@@ -46,12 +61,12 @@ export function SceneLayer() {
           <SceneLighting />
 
           <React.Suspense fallback={null}>
-            <HeroRifle
+            <SceneContents
               progressRef={progressRef}
               reducedMotion={reducedMotion}
               actInView={actInView}
               pointerRef={pointerRef}
-              channel={channel}
+              channels={channels}
             />
           </React.Suspense>
         </Canvas>
@@ -62,7 +77,16 @@ export function SceneLayer() {
        * part of the scene a visitor operates, so it has to be in the
        * accessibility tree (MASTER.md §8).
        */}
-      <GunsmithHud channel={channel} />
+      <HotspotLayer
+        channel={channels.parts}
+        ids={PART_HOTSPOT_ORDER}
+        indexLabel={partHotspotIndexLabel}
+      />
+      {/*
+       * No index on the Lineup: four objects a visitor looks across, not a
+       * sequence they count through (see `lib/hotspots.ts`).
+       */}
+      <HotspotLayer channel={channels.gear} ids={GEAR_HOTSPOT_ORDER} />
 
       <LoadingReadout />
     </>
