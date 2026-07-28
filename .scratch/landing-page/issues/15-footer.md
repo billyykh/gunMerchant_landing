@@ -9,7 +9,6 @@
 - [ ] Footer renders brand mark and a small set of placeholder links
 - [ ] Footer is keyboard operable and readable on both desktop and mobile
 - [ ] Footer sits below all three Acts as the final element on the page
-- [ ] Footer carries a credits link listing each model's title, author, and licence, sourced from the provenance table in `src/assets/ASSETS.md`
 
 ## Design
 

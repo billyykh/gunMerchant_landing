@@ -21,18 +21,14 @@ this contract, fix origins/scale, re-export as GLB into this directory.
 
 Code only ever loads the contract-named exports.
 
-| Raw file          | Contract export          | Sketchfab source / author / licence      |
-| ----------------- | ------------------------ | ---------------------------------------- |
-| `rifle.glb`       | `hero-rifle.glb`         | TODO — fill URL + author + licence       |
-| `rifle.glb` (scope meshes) | `night-vision-scope.glb` | same source as rifle            |
-| `crate.glb`       | `ammo-box.glb`           | TODO — fill URL + author + licence       |
-| `drone.glb`       | `thermal-drone.glb`      | TODO — fill URL + author + licence       |
-| `flashlight.glb`  | `torch.glb`              | TODO — fill URL + author + licence       |
+| Raw file          | Contract export          | 
+| ----------------- | ------------------------ | 
+| `rifle.glb`       | `hero-rifle.glb`         | 
+| `rifle.glb` (scope meshes) | `night-vision-scope.glb`|
+| `crate.glb`       | `ammo-box.glb`           | 
+| `drone.glb`       | `thermal-drone.glb`      | 
+| `flashlight.glb`  | `torch.glb`              | 
 
-All sources are free Sketchfab downloads; most free Sketchfab licences are
-CC-BY, which **requires attribution** — fill this table before closing each
-normalisation ticket, and surface the credits somewhere reachable on the site
-(e.g. footer link).
 
 ## Scene units & orientation
 
