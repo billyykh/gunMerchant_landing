@@ -44,8 +44,8 @@ export const PART_HOTSPOT_ORDER = [
 export const GEAR_HOTSPOT_ORDER = [
   "Gear_ThermalDrone",
   "Gear_AmmoBox",
-  "Gear_NightVisionScope",
   "Gear_Torch",
+  "Gear_NightVisionScope",
 ] as const satisfies readonly GearName[];
 
 /**

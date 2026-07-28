@@ -103,6 +103,11 @@ These cost real time to find; anyone re-running the normalisation needs them.
   the receiver (e.g. the bolt's origin at the bolt-face seat, the scope's origin
   at its rail clamp), NOT the bounding-box center. This keeps Assembly
   interpolation and any per-Part rotation readable.
+- **The `HeroRifle` root's origin is the rifle's centre**, not the butt — the
+  rifle reaches roughly half its 1.16 length either side of whatever position the
+  scene puts it at. Measured from the export, and recorded because the Act 3
+  arrangement is authored against it: read it as the butt and the rifle lands
+  half a length off.
 - **Each Gear Item's origin sits at its base**, on the object's own vertical
   axis — these are props that stand on a surface, and the Lineup arranges them
   on a shared floor. A shared `y` is then a shared floor rather than a
@@ -124,9 +129,17 @@ the composition. Re-measure and update this table if you do.
 | `night-vision-scope.glb` | 0.26 × 0.14 × 0.13    |                             |
 | `torch.glb`              | 0.13 × 0.03 × 0.03    | smallest — 9× shorter than the rifle |
 
-The nine-to-one spread between the rifle and the torch is real and is not to be
-corrected in code: the Lineup composes around it with depth and framing (see the
-`LINEUP_ARRANGEMENT` comment), never by scaling a model away from its true size.
+The nine-to-one spread between the rifle and the torch is real, and the Lineup
+composes around it with depth and framing first (see the `LINEUP_ARRANGEMENT`
+comment) rather than by scaling models.
+
+**One authored exception: the torch is rendered at 2x.** Asked for directly
+against the Act 3 reference render — at its true 0.13 it reads as a mark beside
+a 0.36 ammo box at that framing, not as a product. Every render scale lives in
+`GEAR_SCALE` in `src/lib/scene-state.ts`, which is 1 for everything else, so the
+departures from true size are one short list rather than a fudged position
+somewhere in the arrangement. Anything added here defaults to 1; put it in
+`GEAR_SCALE` only with the same kind of reason.
 
 ## Hero Rifle — `hero-rifle.glb`
 

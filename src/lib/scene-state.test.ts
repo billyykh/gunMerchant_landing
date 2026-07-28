@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { FRAMING_REFERENCE_ASPECT } from "./camera-framing";
 import {
   GEAR_NAMES,
-  LINEUP_FOOTPRINT_RADIUS,
+  GEAR_SCALE,
   PART_NAMES,
   SCROLL_WINDOWS,
+  type CameraPose,
   type SceneState,
+  type Transform,
   type Vec3,
   deriveSceneState,
   deriveStaticSceneState,
+  lineupFootprintRadius,
 } from "./scene-state";
 
 /** A scrub of the whole page, fine enough to catch a discontinuity. */
@@ -27,6 +31,63 @@ const distanceBetween = (a: Vec3, b: Vec3) =>
 /** How far the camera sits from whatever it is pointed at. */
 const framingDistance = ({ camera }: SceneState) =>
   distanceBetween(camera.position, camera.target);
+
+const minus = (a: Vec3, b: Vec3): Vec3 => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+const dot = (a: Vec3, b: Vec3) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+const cross = (a: Vec3, b: Vec3): Vec3 => [
+  a[1] * b[2] - a[2] * b[1],
+  a[2] * b[0] - a[0] * b[2],
+  a[0] * b[1] - a[1] * b[0],
+];
+const unit = (v: Vec3): Vec3 => {
+  const size = length(v);
+  return [v[0] / size, v[1] / size, v[2] / size];
+};
+
+/** The rifle's overall length, from ASSETS.md's measured sizes. */
+const RIFLE_LENGTH = 1.16;
+
+/**
+ * Both ends of the rifle, given where its root sits and which way it is turned.
+ *
+ * The GLB lays it along +X, and the root's origin is its *centre* (ASSETS.md),
+ * so each end is half a length along the yawed X axis — the muzzle at +X, the
+ * butt at -X.
+ */
+const endsOf = ({ position, rotation }: Transform): [Vec3, Vec3] => {
+  const reach = RIFLE_LENGTH / 2;
+  const along = (sign: number): Vec3 => [
+    position[0] + Math.cos(rotation[1]) * reach * sign,
+    position[1],
+    position[2] - Math.sin(rotation[1]) * reach * sign,
+  ];
+
+  return [along(1), along(-1)];
+};
+
+/**
+ * Where a world point lands in the frame: 0 at the centre, ±1 at each edge,
+ * with `depth` positive for anything in front of the lens.
+ *
+ * Written out here rather than imported, because the point of the framing tests
+ * is to check the poses against an independent projection. Measured at the
+ * reference aspect the poses are authored in — `fitFraming` only ever *adds*
+ * width to a narrower window, so a composition that fits at 16:9 fits anywhere.
+ */
+const projectInto = ({ position, target, fov }: CameraPose, point: Vec3) => {
+  const forward = unit(minus(target, position));
+  const right = unit(cross(forward, [0, 1, 0]));
+  const up = cross(right, forward);
+  const offset = minus(point, position);
+  const depth = dot(offset, forward);
+  const tanHalf = Math.tan((fov * Math.PI) / 360);
+
+  return {
+    x: dot(offset, right) / (depth * tanHalf * FRAMING_REFERENCE_ASPECT),
+    y: dot(offset, up) / (depth * tanHalf),
+    depth,
+  };
+};
 
 describe("act derivation", () => {
   it("is in the Hero Act at the top of the page", () => {
@@ -191,6 +252,9 @@ describe("the Lineup", () => {
     // that suits both says nothing about either. Positions are each item's
     // base, so a plan-view distance against summed radii is exactly the
     // question — do these two overlap on the floor?
+    //
+    // As rendered, not as exported: the torch is shown at 2x, and a clearance
+    // measured against the model it is not being drawn at proves nothing.
     const { gear } = deriveSceneState(1);
     const onFloor = ([x, , z]: Vec3) => Math.hypot(x, z);
 
@@ -205,7 +269,7 @@ describe("the Lineup", () => {
         ]);
 
         expect(apart).toBeGreaterThan(
-          LINEUP_FOOTPRINT_RADIUS[a] + LINEUP_FOOTPRINT_RADIUS[b]
+          lineupFootprintRadius(a) + lineupFootprintRadius(b)
         );
       }
     }
@@ -226,14 +290,57 @@ describe("the Lineup", () => {
   it("frames the arrangement it actually built", () => {
     // The Act 3 camera and the Lineup layout are derived separately; this
     // catches them drifting apart.
+    //
+    // Asked as a projection rather than as "the target sits inside the spread
+    // of the objects", which is what this used to check. That was a proxy, and
+    // a wrong one: the reference composition deliberately aims above the group
+    // and leaves headroom, so a camera obeying the proxy would fail the brief
+    // while a camera meeting the brief failed the test. Whether every object is
+    // in shot is the question the name was always asking.
     const { gear, heroRifle, camera } = deriveSceneState(1);
-    const placed = [heroRifle.position, ...GEAR_NAMES.map((n) => gear[n].position)];
+    const [muzzle, butt] = endsOf(heroRifle);
+    const placed = [
+      ["Hero Rifle", heroRifle.position] as const,
+      // The rifle is 1.16 long and lies diagonally across the frame, so its two
+      // ends are the points most likely to leave it — and the root is their
+      // midpoint, so checking the root alone would never catch either.
+      ["Hero Rifle muzzle", muzzle] as const,
+      ["Hero Rifle butt", butt] as const,
+      ...GEAR_NAMES.map((name) => [name, gear[name].position] as const),
+    ];
 
-    for (const axis of [0, 1, 2] as const) {
-      const values = placed.map((position) => position[axis]);
-      expect(camera.target[axis]).toBeGreaterThanOrEqual(Math.min(...values));
-      expect(camera.target[axis]).toBeLessThanOrEqual(Math.max(...values));
+    for (const [name, point] of placed) {
+      const { x, y, depth } = projectInto(camera, point);
+
+      expect(depth, `${name} is behind the camera`).toBeGreaterThan(0);
+      expect(Math.abs(x), `${name} is off the side of the frame`).toBeLessThanOrEqual(1);
+      expect(Math.abs(y), `${name} is off the top or bottom`).toBeLessThanOrEqual(1);
     }
+  });
+
+  it("looks down on the Lineup rather than across it", () => {
+    // The Gear Items stand on a floor, and 32° of downward tilt is what shows
+    // that floor — level with the row they stack into one horizontal band and
+    // the ammo box is seen as a rim rather than as an open tray.
+    const { camera } = deriveSceneState(1);
+    const drop = camera.position[1] - camera.target[1];
+    const run = Math.hypot(
+      camera.position[0] - camera.target[0],
+      camera.position[2] - camera.target[2]
+    );
+
+    expect((Math.atan2(drop, run) * 180) / Math.PI).toBeCloseTo(32, 0);
+  });
+
+  it("shows every Gear Item at its true size but the torch", () => {
+    // ASSETS.md holds that the nine-to-one spread between the rifle and the
+    // torch is real and is composed around, not scaled away. The torch is the
+    // one authored exception; this fails the moment a second one is added
+    // quietly rather than argued for.
+    const scaled = GEAR_NAMES.filter((name) => GEAR_SCALE[name] !== 1);
+
+    expect(scaled).toEqual(["Gear_Torch"]);
+    expect(GEAR_SCALE.Gear_Torch).toBe(2);
   });
 
   it("keeps the arrangement fixed — Gear Items are staged, not animated by scroll", () => {

@@ -3,7 +3,7 @@
 import * as React from "react";
 import { useGLTF } from "@react-three/drei";
 
-import { GEAR_NAMES, type GearName } from "@/lib/scene-state";
+import { GEAR_NAMES, GEAR_SCALE, type GearName } from "@/lib/scene-state";
 
 import { measureAnchor, type Anchored } from "./project-hotspots";
 
@@ -55,7 +55,19 @@ export function useLineupGear(): { items: Map<GearName, Anchored> } {
         );
       }
 
+      /*
+       * Anchor first, scale second. `measureAnchor` returns the bounding-box
+       * centre in the object's *local* space, and `projectHotspots` puts it
+       * back through `matrixWorld` — so a local anchor measured before the
+       * scale is applied is carried by that same scale afterwards, and the
+       * Callout stays on the middle of the object it grew with.
+       *
+       * Set once here rather than per frame: it is a property of the model, not
+       * of the scroll position, and the frame loop already writes position and
+       * rotation on every object every frame.
+       */
       found.set(name, { object: scene, anchor: measureAnchor(scene) });
+      scene.scale.setScalar(GEAR_SCALE[name]);
     });
 
     return found;

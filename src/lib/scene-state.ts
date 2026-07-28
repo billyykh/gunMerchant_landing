@@ -147,40 +147,85 @@ const EXPLODED_OFFSETS: Record<PartName, Transform> = {
  * the torch 0.13. An arrangement spaced for objects the size of the rifle
  * leaves the small ones as specks either side of it.
  *
- * The three ground items stand on the floor — every Gear Item's origin sits at
- * its base (ASSETS.md, origin conventions), so their shared height is a shared
- * floor rather than a coincidence —
- * and are ordered large to small left to right, which gives the row a direction
- * instead of a jumble. The drone is off that floor and set back: it is the one
- * object that flies, and standing it beside a box would be the one wrong note in
- * the group.
+ * **Matched to a supplied reference render**, and solved from it rather than
+ * eyeballed: each object's screen position in the reference was read as a
+ * fraction of the frame, and a ray through that point was intersected with the
+ * floor plane under the Act 3 camera below. The four Gear Items land within 4%
+ * of frame height and 3% of frame width of where the reference puts them.
  *
- * They step *slightly* toward the camera as they get smaller, which is the only
- * honest lever on a nine-to-one size range: the torch is nearest the lens and
- * reads larger than it would beside the box, with nothing scaled and no
- * proportion misreported. Slightly, because the camera looks down — depth on a
- * downward-tilted view moves an object down the frame as well as forward, and a
- * bigger step turned the row into a diagonal cascade rather than a lineup.
+ * **The gear stands on one floor, in a shallow arc, not on a receding
+ * diagonal.** Every Gear Item's origin sits at its base (ASSETS.md, origin
+ * conventions), so a shared `y` is a shared floor rather than a coincidence, and
+ * that includes the drone — the reference sets it down on its legs at the left
+ * of the group rather than flying it behind the row. The ammo box is the one
+ * item set back, with the torch in front of it; the rest come forward toward the
+ * lens as they get smaller.
  *
- * The rifle lands *above* the row and the camera drops to meet it, so the Act 2
- * → 3 move still reads as a fall: it ends lower than it began, and lower than
- * the frame it left.
+ * **The rifle is the right-hand diagonal.** It lies across the right of the
+ * frame with its muzzle running up and away and its butt down toward the camera,
+ * set back behind the gear row. That is the one placement that lets a 1.16-long
+ * object share a frame with four objects a quarter its size — it reads as the
+ * backdrop the gear is arranged in front of, rather than as a fifth member of
+ * the row.
  *
- * The whole group is held clear of the right-hand third of the frame, because
- * that is where the Detail Panel comes in. A Gear Item behind the panel that
- * describes it is a showcase rotating where nobody can see it — the one thing
- * this Act is for. The two layers are composed against each other, not
- * separately.
+ * The yaw is what produces that diagonal, and it is large: the GLB lays the
+ * rifle along +X (muzzle +X, butt -X), so pointing the muzzle away and to the
+ * left needs `cos(y) < 0`, hence ~2.47 rad rather than a small angle. The drop
+ * interpolates rotation from zero, so the rifle turns through most of a
+ * half-circle as it falls — a deliberate swing that ends in the reference pose,
+ * not a wobble. It lies flat: the small roll it used to carry became a nose tilt
+ * once the yaw passed 90°, and the reference has it level.
+ *
+ * The rifle still lands *above* the row and the camera drops to meet it, so the
+ * Act 2 → 3 move reads as a fall — but it now rests 0.21 clear of the floor
+ * rather than 0.64, because the reference shows a lineup laid out on one ground
+ * plane, not a rifle hanging over one.
+ *
+ * **Two things the reference asks for that the models cannot give.** Its rifle
+ * spans 47% of the frame where ours spans 30%: at 1.16 against a 0.36 ammo box,
+ * that is the true proportion, and ASSETS.md is explicit that it is not to be
+ * corrected by scaling a model. And its butt sits at 93% of the frame width,
+ * which the solve reproduced on paper and the browser then rejected: the solve
+ * treated this position as the butt, and the HeroRifle root's origin is the
+ * rifle's *centre* (ASSETS.md, origin conventions), so the stock ran half a
+ * length further right and hard into the frame edge. Placed by the centre
+ * instead, which lands the butt at 86% — three points short of the reference,
+ * and the margin that keeps the stock on screen.
+ *
+ * That still reaches into the right-hand third, where an open Detail Panel is
+ * 420px wide. No *Gear Item* is under that panel — those are what it describes,
+ * and a showcase turning behind its own panel would hide the one thing this Act
+ * is for — but the rifle's rear end is, while a panel is open.
  */
 const LINEUP_ARRANGEMENT = {
-  heroRifle: { position: [-0.25, -0.52, -0.25], rotation: [0, -0.35, 0.06] },
+  heroRifle: { position: [0.85, -0.95, 0.05], rotation: [0, 2.47, 0] },
   gear: {
-    Gear_ThermalDrone: { position: [-0.77, -0.78, -0.38], rotation: [0, 0.3, 0] },
-    Gear_AmmoBox: { position: [-0.37, -1.16, -0.08], rotation: [0, 0.4, 0] },
-    Gear_NightVisionScope: { position: [0.07, -1.14, 0.02], rotation: [0, -0.45, 0] },
-    Gear_Torch: { position: [0.4, -1.12, 0.16], rotation: [0, 0.55, 0] },
+    Gear_ThermalDrone: { position: [-0.88, -1.16, 0.64], rotation: [0, 0.3, 0] },
+    Gear_AmmoBox: { position: [-0.34, -1.16, 0.12], rotation: [0, 0.36, 0] },
+    Gear_NightVisionScope: { position: [0.3, -1.16, 0.58], rotation: [0, -0.45, 0] },
+    Gear_Torch: { position: [-0.25, -1.16, 0.53], rotation: [0, 0.55, 0] },
   },
 } as const satisfies { heroRifle: Transform; gear: Record<GearName, Transform> };
+
+/**
+ * How large each Gear Item is rendered against its true exported size.
+ *
+ * Normally 1, and ASSETS.md is emphatic about why: the nine-to-one spread
+ * between the rifle and the torch is real, and the Lineup composes around it
+ * with depth and framing rather than by misreporting a size.
+ *
+ * The torch is an authored exception, asked for directly against the reference
+ * render. At its true 0.13 it is a mark beside a 0.36 ammo box at this framing;
+ * at 2x it is an object, which is what the Act needs it to be. Recorded here as
+ * a named departure rather than by editing the arrangement to fake it, so the
+ * one place the models are not shown at scale is impossible to miss.
+ */
+export const GEAR_SCALE = {
+  Gear_ThermalDrone: 1,
+  Gear_AmmoBox: 1,
+  Gear_NightVisionScope: 1,
+  Gear_Torch: 2,
+} as const satisfies Record<GearName, number>;
 
 /**
  * How much floor each object takes up — half its largest horizontal extent,
@@ -199,6 +244,19 @@ export const LINEUP_FOOTPRINT_RADIUS = {
   Gear_NightVisionScope: 0.13,
   Gear_Torch: 0.065,
 } as const satisfies Record<GearName | "heroRifle", number>;
+
+/**
+ * The floor a Gear Item takes up *as rendered* — its measured radius times
+ * whatever `GEAR_SCALE` shows it at.
+ *
+ * The two are separate on purpose. `LINEUP_FOOTPRINT_RADIUS` is a transcription
+ * of ASSETS.md and answers to the model; this answers to the composition. An
+ * arrangement checked against the measured radius alone would call the 2x torch
+ * clear of its neighbours using the footprint of a torch nobody is looking at.
+ */
+export function lineupFootprintRadius(name: GearName): number {
+  return LINEUP_FOOTPRINT_RADIUS[name] * GEAR_SCALE[name];
+}
 
 export interface CameraPose {
   position: Vec3;
@@ -258,15 +316,25 @@ const CAMERA_POSES: Record<Act, CameraPose> = {
   /**
    * Act 3: dropped and pulled back to hold all five objects.
    *
-   * The arrangement is about 1.5 wide and 0.7 tall at real scale, so this sits
-   * ~1.85 out — far enough that a 40° vertical field frames it with margin and
-   * leaves the right-hand third free for the Detail Panel, close enough that
-   * the 0.13 torch is still an object rather than a mark.
+   * Matched to the same reference render the arrangement is: square on to the
+   * row in azimuth, and looking **down** it at 32° rather than the 12° this used
+   * to sit at. The steep angle is what makes the reference legible — it opens
+   * the floor out so the four Gear Items read as standing at different depths
+   * instead of stacking into one horizontal band, and it shows the ammo box's
+   * open tray rather than its rim edge-on.
    *
-   * Slightly above the rifle and looking down at the row, so the Gear Items are
-   * seen standing on their baseline rather than edge-on.
+   * This is the camera `LINEUP_ARRANGEMENT` was solved against, so the two are
+   * one composition and cannot be tuned apart: move this and every object moves
+   * off its reference mark. 2.6 out at a 40° vertical field holds the group with
+   * margin at 16:9, and `fitFraming` widens and dollies from there on anything
+   * narrower.
+   *
+   * The optical axis passes *above* the objects rather than through them — the
+   * reference sits the whole group in the lower two thirds of the frame and
+   * leaves headroom, which is what a lineup photographed from standing height
+   * looks like.
    */
-  lineup: { position: [0, -0.45, 1.75], target: [-0.05, -0.82, -0.05], fov: 40 },
+  lineup: { position: [0.05, 0.778, 2.505], target: [0.05, -0.6, 0.3], fov: 40 },
 };
 
 /**
