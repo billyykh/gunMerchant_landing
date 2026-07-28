@@ -240,10 +240,21 @@ const CAMERA_POSES: Record<Act, CameraPose> = {
    * of the frame.
    *
    * Camera and target are both shifted along the camera's own right vector, so
-   * the rifle sits left of centre without the framing rotating. Panning by
-   * moving the target alone would swing the camera and change the angle.
+   * the framing pans without rotating. Panning by moving the target alone would
+   * swing the camera and change the angle.
+   *
+   * The rifle used to sit left of centre. It is now centred, measured rather
+   * than eyeballed: the midpoint of the eight projected Part anchors against
+   * the midpoint of the frame, at 1626px wide. Two passes calibrated the pan at
+   * roughly 1,900px per world unit at this distance, which is what the final
+   * offset of ~0.040 back along the camera's right vector was solved from.
+   *
+   * Worth knowing before re-tuning: an open Detail Panel is 420px of the right
+   * edge, and the muzzle already runs under it at this framing. Centring made
+   * that overlap slightly worse and was still the right call — the resting
+   * composition is what a visitor looks at for most of the Act.
    */
-  gunsmith: { position: [0.864, 0.216, 1.044], target: [0.134, 0.125, -0.087], fov: 30 },
+  gunsmith: { position: [0.830, 0.216, 1.066], target: [0.100, 0.125, -0.065], fov: 30 },
   /**
    * Act 3: dropped and pulled back to hold all five objects.
    *

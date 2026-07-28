@@ -211,7 +211,7 @@ export function HotspotLayer<T extends CatalogId>({
                    */}
                   <span
                     aria-hidden="true"
-                    className="absolute top-1/2 left-1/2 size-[3px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/40 transition-colors duration-[var(--dur-fast)] group-hover:bg-thermal-4"
+                    className="absolute top-1/2 left-1/2 size-[5px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85 ring-1 ring-black/50 transition-colors duration-[var(--dur-fast)] group-hover:bg-thermal-4 group-focus-visible:bg-thermal-4"
                   />
                 </button>
 
